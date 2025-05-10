@@ -5,3 +5,6 @@ compatibility_date = "2023-01-01"
 
 compatibility_flags = ["nodejs_compat"] # Example: If you need Node.js compatibility features
 
+[[kv_namespaces]]
+binding = "LATEST_VALUE"
+id = "302c57f8e9c14a819a5a4e74eff8149c"
