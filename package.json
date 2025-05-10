@@ -1,0 +1,26 @@
+{
+  "name": "workout-calculator",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sufiane/workout-calculator.git"
+  },
+  "author": "Sufiane Souissi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sufiane/workout-calculator/issues"
+  },
+  "homepage": "https://github.com/Sufiane/workout-calculator#readme",
+  "description": "",
+  "scripts": {
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "22.15.17",
+    "typescript": "5.8.3",
+    "wrangler": "4.14.4"
+  }
+}

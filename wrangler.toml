@@ -1,0 +1,7 @@
+
+name = "workout-calculator"
+main = "src/index.ts"
+compatibility_date = "2023-01-01"
+
+compatibility_flags = ["nodejs_compat"] # Example: If you need Node.js compatibility features
+
