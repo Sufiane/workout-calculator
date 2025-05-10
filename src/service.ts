@@ -1,7 +1,8 @@
 import { roundUp } from './utils/round-up.utils';
+import { Program } from './types/program.type';
 
 
-export function calculateFromMaxRm(maxRm: number) {
+export function calculateFromMaxRm(maxRm: number): Program {
     const max90 = roundUp(maxRm * 0.9);
 
     return {
@@ -13,7 +14,7 @@ export function calculateFromMaxRm(maxRm: number) {
     };
 }
 
-export function calculateFromMax90(max90: number) {
+export function calculateFromMax90(max90: number): Program {
     return {
         maxRm: roundUp(max90 * 100 / 90),
         max90,
@@ -23,7 +24,7 @@ export function calculateFromMax90(max90: number) {
     };
 }
 
-export function calculateFromRep95(rep95: number) {
+export function calculateFromRep95(rep95: number): Program {
     const max90 = rep95 * 100 / 95;
 
     return {
@@ -35,7 +36,7 @@ export function calculateFromRep95(rep95: number) {
     };
 }
 
-export function calculateFromRep90(rep90: number) {
+export function calculateFromRep90(rep90: number): Program {
     const max90 = rep90 * 100 / 90;
 
     return {
@@ -47,7 +48,7 @@ export function calculateFromRep90(rep90: number) {
     };
 }
 
-export function calculateFromRep85(rep85: number) {
+export function calculateFromRep85(rep85: number): Program {
     const max90 = rep85 * 100 / 85;
 
     return {
