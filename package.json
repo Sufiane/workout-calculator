@@ -15,7 +15,9 @@
   "description": "",
   "scripts": {
     "build": "npx tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "publish": "wrangler publish",
+    "dev": "wrangler dev"
   },
   "dependencies": {},
   "devDependencies": {

@@ -3,5 +3,6 @@ export interface Program {
     max90: number,
     rep85: number,
     rep90: number,
-    rep95: number
+    rep95: number,
+    nextMax90: number,
 }

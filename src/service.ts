@@ -1,62 +1,67 @@
-import { roundUp } from './utils/round-up.utils';
+import { rounding } from './utils/round.utils';
 import { Program } from './types/program.type';
 
 
 export function calculateFromMaxRm(maxRm: number): Program {
-    const max90 = roundUp(maxRm * 0.9);
+    const max90 = rounding(maxRm * 0.9);
 
     return {
         maxRm,
         max90,
-        rep85: roundUp(max90 * 0.85),
-        rep90: roundUp(max90 * 0.90),
-        rep95: roundUp(max90 * 0.95),
+        rep85: rounding(max90 * 0.85),
+        rep90: rounding(max90 * 0.90),
+        rep95: rounding(max90 * 0.95),
+        nextMax90: rounding(max90 + 2.5),
     };
 }
 
 export function calculateFromMax90(max90: number): Program {
     return {
-        maxRm: roundUp(max90 * 100 / 90),
+        maxRm: rounding(max90 * 100 / 90),
         max90,
-        rep85: roundUp(max90 * 0.85),
-        rep90: roundUp(max90 * 0.90),
-        rep95: roundUp(max90 * 0.95),
+        rep85: rounding(max90 * 0.85),
+        rep90: rounding(max90 * 0.90),
+        rep95: rounding(max90 * 0.95),
+        nextMax90: rounding(max90 + 2.5),
     };
 }
 
 export function calculateFromRep95(rep95: number): Program {
-    const max90 = rep95 * 100 / 95;
+    const max90 = rounding(rep95 * 100 / 95);
 
     return {
-        maxRm: roundUp(max90 * 100 / 90),
+        maxRm: rounding(max90 * 100 / 90),
         max90,
-        rep85: roundUp(max90 * 0.85),
-        rep90: roundUp(max90 * 0.90),
+        rep85: rounding(max90 * 0.85),
+        rep90: rounding(max90 * 0.90),
         rep95: rep95,
+        nextMax90: rounding(max90 + 2.5),
     };
 }
 
 export function calculateFromRep90(rep90: number): Program {
-    const max90 = rep90 * 100 / 90;
+    const max90 = rounding(rep90 * 100 / 90);
 
     return {
-        maxRm: roundUp(max90 * 100 / 90),
+        maxRm: rounding(max90 * 100 / 90),
         max90,
-        rep85: roundUp(max90 * 0.85),
+        rep85: rounding(max90 * 0.85),
         rep90: rep90,
-        rep95: roundUp(max90 * 0.95),
+        rep95: rounding(max90 * 0.95),
+        nextMax90: rounding(max90 + 2.5),
     };
 }
 
 export function calculateFromRep85(rep85: number): Program {
-    const max90 = rep85 * 100 / 85;
+    const max90 = rounding(rep85 * 100 / 85);
 
     return {
-        maxRm: roundUp(max90 * 100 / 90),
+        maxRm: rounding(max90 * 100 / 90),
         max90,
-        rep85: roundUp(rep85),
-        rep90: roundUp(max90 * 0.90),
-        rep95: roundUp(max90 * 0.95),
+        rep85: rep85,
+        rep90: rounding(max90 * 0.90),
+        rep95: rounding(max90 * 0.95),
+        nextMax90: rounding(max90 + 2.5),
     };
 }
 
