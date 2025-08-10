@@ -40,14 +40,14 @@ export default {
 
         if (Object.keys(query).length === 0) {
             return Response.json({
-                instructions: "You need to specify the query parameters.",
+                instructions: 'You need to specify the query parameters.',
                 parameters: {
-                    maxRm: "Your max repetitions",
-                    max90: "90% of your max repetitions",
-                    rep85: "How much you can push doing 5x5. The load you can push at 85% of your 95% of your max 90. ie: ",
-                    rep90: "How much you can push doing 5x3rep",
-                    rep95: "How much you can push doing 5x1rep"
-                }
+                    maxRm: 'Your max repetition',
+                    max90: '90% of your max repetition',
+                    rep85: 'How much you can push doing 5x5. The load you can push at 85% of your 95% of your max 90. ie: ',
+                    rep90: 'How much you can push doing 5x3rep',
+                    rep95: 'How much you can push doing 5x1rep',
+                },
             });
         }
 
