@@ -38,7 +38,7 @@ export default {
 
         const query = url.searchParams;
 
-        if (Object.keys(query).length === 0) {
+        if (query.size === 0) {
             return Response.json({
                 instructions: 'You need to specify the query parameters.',
                 parameters: {
