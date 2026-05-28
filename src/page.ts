@@ -114,6 +114,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
     border: 1px solid var(--accent);
   }
   .hint { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .delta { font-size: 12px; font-weight: 600; }
+  .delta.up { color: #22c55e; }
+  .delta.down { color: #ef4444; }
+  .delta.flat { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -354,10 +358,20 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
 
     historyBox.innerHTML = entries
-      .map(function (entry) {
+      .map(function (entry, index) {
         const when = new Date(entry.createdAt).toLocaleString();
         const summary = '1RM ' + entry.program.maxRm + ' · 90% ' + entry.program.max90;
-        return '<div class="entry"><span>' + summary + '</span><span class="when">' + when + '</span></div>';
+        const older = entries[index + 1];
+        let delta = '';
+
+        if (older) {
+          const diff = entry.program.maxRm - older.program.maxRm;
+          const direction = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+          const sign = diff > 0 ? '+' : '';
+          delta = ' <span class="delta ' + direction + '">' + sign + diff + '</span>';
+        }
+
+        return '<div class="entry"><span>' + summary + delta + '</span><span class="when">' + when + '</span></div>';
       })
       .join('');
   }
