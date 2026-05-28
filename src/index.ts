@@ -4,6 +4,7 @@ import type { HistoryEntry } from './history.db';
 import { AuthError, enforceRateLimit, login, refresh, signup } from './auth/auth.service';
 import { verifyJwt } from './auth/jwt';
 import { PAGE_HTML } from './page';
+import { ICON_SVG, MANIFEST, SERVICE_WORKER } from './pwa';
 import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS } from './auth/auth.service';
 
 interface SessionUser {
@@ -19,6 +20,27 @@ const handlePage = (): Response => {
 
 const handleFavicon = (): Response => {
     return new Response(null, { status: 204 });
+};
+
+const handleManifest = (): Response => {
+    return new Response(MANIFEST, {
+        headers: { 'Content-Type': 'application/manifest+json' },
+    });
+};
+
+const handleServiceWorker = (): Response => {
+    return new Response(SERVICE_WORKER, {
+        headers: {
+            'Content-Type': 'application/javascript',
+            'Service-Worker-Allowed': '/',
+        },
+    });
+};
+
+const handleIcon = (): Response => {
+    return new Response(ICON_SVG, {
+        headers: { 'Content-Type': 'image/svg+xml' },
+    });
 };
 
 function parseCookies(request: Request): Record<string, string> {
@@ -233,6 +255,18 @@ export default {
 
         if (path === '/favicon.ico') {
             return handleFavicon();
+        }
+
+        if (path === '/manifest.webmanifest') {
+            return handleManifest();
+        }
+
+        if (path === '/sw.js') {
+            return handleServiceWorker();
+        }
+
+        if (path === '/icon.svg') {
+            return handleIcon();
         }
 
         if (path === '/api/auth/signup' && request.method === 'POST') {

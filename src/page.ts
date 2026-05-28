@@ -4,6 +4,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Workout Calculator</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f1115" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Workout" />
 <style>
   :root {
     --bg: #0f1115;
@@ -704,6 +710,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
       endPending(calcButton);
     }
   });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
 
   (async function init() {
     await loadSession();
