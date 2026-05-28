@@ -1,4 +1,5 @@
 import { createUser, findUserByEmail } from './auth.db';
+import { getRate, setRate } from './rate.db';
 import { signJwt, verifyJwt } from './jwt';
 
 const PBKDF2_ITERATIONS = 100000;
@@ -6,6 +7,9 @@ const KEY_LENGTH_BITS = 256;
 
 export const ACCESS_TTL_SECONDS = 300;
 export const REFRESH_TTL_SECONDS = 604800;
+
+const RATE_WINDOW_MS = 60000;
+const RATE_MAX_ATTEMPTS = 10;
 
 const encoder = new TextEncoder();
 
@@ -22,6 +26,23 @@ export interface AuthResult {
     user: { id: string; email: string };
     accessToken: string;
     refreshToken: string;
+}
+
+export async function enforceRateLimit(env: Env, ip: string, action: string): Promise<void> {
+    const key = action + ':' + ip;
+    const now = Date.now();
+    const row = await getRate(env, key);
+
+    if (!row || now > row.reset_at) {
+        await setRate(env, key, 1, now + RATE_WINDOW_MS);
+        return;
+    }
+
+    if (row.count >= RATE_MAX_ATTEMPTS) {
+        throw new AuthError('rate_limited', 429);
+    }
+
+    await setRate(env, key, row.count + 1, row.reset_at);
 }
 
 function toBase64(bytes: Uint8Array): string {

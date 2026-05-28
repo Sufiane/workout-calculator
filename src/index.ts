@@ -1,6 +1,6 @@
 import { generateBenchProgram } from './service';
 import { appendHistory, getHistory } from './history.db';
-import { AuthError, login, refresh, signup } from './auth/auth.service';
+import { AuthError, enforceRateLimit, login, refresh, signup } from './auth/auth.service';
 import { verifyJwt } from './auth/jwt';
 import { PAGE_HTML } from './page';
 import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS } from './auth/auth.service';
@@ -76,6 +76,10 @@ function authErrorResponse(error: unknown): Response {
     return Response.json({ error: 'auth_failed' }, { status: 500 });
 }
 
+function clientIp(request: Request): string {
+    return request.headers.get('CF-Connecting-IP') || 'local';
+}
+
 async function readCredentials(request: Request): Promise<{ email: string; password: string }> {
     try {
         const body = await request.json<{ email?: string; password?: string }>();
@@ -107,6 +111,8 @@ async function handleSignup(request: Request, env: Env): Promise<Response> {
     const credentials = await readCredentials(request);
 
     try {
+        await enforceRateLimit(env, clientIp(request), 'signup');
+
         const result = await signup(env, credentials.email, credentials.password);
 
         return jsonWithCookies({ email: result.user.email }, buildAuthCookies(result.accessToken, result.refreshToken));
@@ -119,6 +125,8 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
     const credentials = await readCredentials(request);
 
     try {
+        await enforceRateLimit(env, clientIp(request), 'login');
+
         const result = await login(env, credentials.email, credentials.password);
 
         return jsonWithCookies({ email: result.user.email }, buildAuthCookies(result.accessToken, result.refreshToken));
