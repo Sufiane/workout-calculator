@@ -162,7 +162,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   <div class="card" id="auth-card">
     <form id="auth-form">
-      <h2>Sign in to save your progress</h2>
+      <h2>Track your progress</h2>
+      <p class="sub" style="margin: 0 0 14px;">Sign in to save your program and history, watch your progression chart grow, and keep it across devices. Without an account, anything you start lives only in this browser.</p>
       <div class="row">
         <div>
           <label for="auth-email">Email</label>
@@ -457,19 +458,26 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   function renderProgramStatus(entries) {
     const info = activeInfo(entries);
+    const anonNote = currentUser ? '' : ' <span class="muted">· on this device only — <strong>sign in</strong> to keep it.</span>';
+    let message;
 
     if (info.state === 'none') {
-      statusBox.innerHTML = '<span class="muted">No active program. Preview a calc, then Start program.</span>';
+      message = currentUser
+        ? 'No active program. Preview a calc, then Start program.'
+        : 'No active program. Preview a calc, then Start program. <strong>Sign in</strong> to save it across devices.';
+      statusBox.innerHTML = '<span class="muted">' + message + '</span>';
       return;
     }
 
     const startStr = info.start.toLocaleDateString();
 
     if (info.state === 'active') {
-      statusBox.innerHTML = '<span class="muted">Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr + '</span>';
+      message = 'Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr;
     } else {
-      statusBox.innerHTML = '<span class="muted">Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.</span>';
+      message = 'Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.';
     }
+
+    statusBox.innerHTML = '<span class="muted">' + message + '</span>' + anonNote;
   }
   const signupButton = document.getElementById('signup-btn');
   const logoutButton = document.getElementById('logout-btn');
