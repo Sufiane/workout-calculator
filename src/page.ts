@@ -12,6 +12,16 @@ export const PAGE_HTML = `<!DOCTYPE html>
     --text: #e7e9ee;
     --muted: #8b909c;
     --accent: #4f8cff;
+    --input-bg: #0f1115;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --line: #e2e5ea;
+    --text: #1a1d24;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --input-bg: #f4f5f7;
   }
   * { box-sizing: border-box; }
   body {
@@ -37,7 +47,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   select, input {
     width: 100%;
     padding: 10px 12px;
-    background: #0f1115;
+    background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: 8px;
     color: var(--text);
@@ -60,7 +70,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .error { color: #ff6b6b; font-size: 14px; margin-top: 12px; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .metric {
-    background: #0f1115;
+    background: var(--input-bg);
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 12px;
@@ -81,12 +91,29 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .entry .when { color: var(--muted); font-size: 12px; }
   .empty { color: var(--muted); font-size: 14px; }
   .hidden { display: none; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .theme-toggle {
+    width: auto;
+    padding: 7px 12px;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 <main>
-  <h1>Workout Calculator</h1>
-  <p class="sub">Enter any one value and get your full bench program.</p>
+  <div class="head">
+    <div>
+      <h1>Workout Calculator</h1>
+      <p class="sub">Enter any one value and get your full bench program.</p>
+    </div>
+    <button id="theme-toggle" class="theme-toggle" type="button">Light</button>
+  </div>
 
   <div class="card">
     <form id="calc-form">
@@ -132,6 +159,22 @@ export const PAGE_HTML = `<!DOCTYPE html>
     ['rep95', '5x1'],
     ['nextMax90', 'Next 90%'],
   ];
+
+  const THEME_KEY = 'workout-theme';
+  const themeToggle = document.getElementById('theme-toggle');
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggle.textContent = theme === 'light' ? 'Dark' : 'Light';
+  }
+
+  applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
+  themeToggle.addEventListener('click', function () {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  });
 
   const form = document.getElementById('calc-form');
   const errorBox = document.getElementById('error');
