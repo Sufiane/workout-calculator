@@ -470,7 +470,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   function renderProgramStatus(entries) {
     const info = activeInfo(entries);
-    const anonNote = currentUser ? '' : ' <span class="muted">· on this device only — <strong>sign in</strong> to keep it.</span>';
+    const anonNote = currentUser ? '' : ' <span class="muted">· <strong>on this device only</strong> — <strong>sign in</strong> to keep it.</span>';
     let message;
 
     if (info.state === 'none') {
