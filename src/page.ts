@@ -113,6 +113,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     color: var(--accent);
     border: 1px solid var(--accent);
   }
+  .hint { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -137,6 +138,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
             <option value="rep90">5x3 (rep90)</option>
             <option value="rep85">5x5 (rep85)</option>
           </select>
+          <small id="key-hint" class="hint"></small>
         </div>
         <div>
           <label for="input-value">Weight (kg)</label>
@@ -210,6 +212,22 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const useNextButton = document.getElementById('use-next');
   const inputKey = document.getElementById('input-key');
   const inputValue = document.getElementById('input-value');
+  const keyHint = document.getElementById('key-hint');
+
+  const HINTS = {
+    maxRm: 'The most weight you can lift for a single rep.',
+    max90: '90% of your 1 rep max.',
+    rep95: 'Top weight you can push for 5x1 (singles).',
+    rep90: 'Top weight you can push for 5x3 (triples).',
+    rep85: 'Top weight you can push for 5x5.',
+  };
+
+  function updateHint() {
+    keyHint.textContent = HINTS[inputKey.value];
+  }
+
+  inputKey.addEventListener('change', updateHint);
+  updateHint();
 
   useNextButton.addEventListener('click', function () {
     inputKey.value = 'max90';
