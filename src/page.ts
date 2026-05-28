@@ -103,7 +103,23 @@ export const PAGE_HTML = `<!DOCTYPE html>
     font-weight: 500;
     cursor: pointer;
   }
+  #chart { position: relative; }
   #chart svg { display: block; width: 100%; height: auto; }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    z-index: 2;
+    min-width: 120px;
+  }
+  .tooltip .tt-date { color: var(--muted); margin-bottom: 6px; }
+  .tt-row { display: flex; align-items: center; gap: 6px; }
+  .tt-row .tt-val { margin-left: auto; font-weight: 600; }
   .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -162,7 +178,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   <div class="card">
     <h2>Progression</h2>
-    <div id="chart"></div>
+    <div id="chart">
+      <div id="chart-svg"></div>
+      <div id="tooltip" class="tooltip hidden"></div>
+    </div>
     <div class="legend" id="legend"></div>
   </div>
 
@@ -212,6 +231,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const resultGrid = document.getElementById('result-grid');
   const historyBox = document.getElementById('history');
   const chartBox = document.getElementById('chart');
+  const svgBox = document.getElementById('chart-svg');
+  const tooltipBox = document.getElementById('tooltip');
   const legendBox = document.getElementById('legend');
   const useNextButton = document.getElementById('use-next');
   const inputKey = document.getElementById('input-key');
@@ -243,7 +264,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     const ordered = (entries || []).slice().reverse();
 
     if (ordered.length === 0) {
-      chartBox.innerHTML = '<div class="empty">No data yet.</div>';
+      svgBox.innerHTML = '<div class="empty">No data yet.</div>';
       legendBox.innerHTML = '';
       return;
     }
@@ -320,14 +341,53 @@ export const PAGE_HTML = `<!DOCTYPE html>
       });
     });
 
+    const step = ordered.length === 1 ? plotW : plotW / (ordered.length - 1);
+    ordered.forEach(function (entry, index) {
+      const colX = xFor(index) - step / 2;
+      svg += '<rect class="hit" data-index="' + index + '" x="' + colX + '" y="' + top + '" width="' + step + '" height="' + plotH + '" fill="transparent" />';
+    });
+
     svg += '</svg>';
-    chartBox.innerHTML = svg;
+    svgBox.innerHTML = svg;
 
     legendBox.innerHTML = SERIES
       .map(function (series) {
         return '<span><span class="dot" style="background:' + series.color + '"></span>' + series.label + '</span>';
       })
       .join('');
+
+    function showTooltip(event, index) {
+      const entry = ordered[index];
+      const when = new Date(entry.createdAt).toLocaleString();
+      const rows = SERIES
+        .map(function (series) {
+          return '<div class="tt-row"><span class="dot" style="background:' + series.color + '"></span>' + series.label + '<span class="tt-val">' + entry.program[series.key] + '</span></div>';
+        })
+        .join('');
+      tooltipBox.innerHTML = '<div class="tt-date">' + when + '</div>' + rows;
+      tooltipBox.classList.remove('hidden');
+
+      const bounds = chartBox.getBoundingClientRect();
+      let posX = event.clientX - bounds.left + 12;
+      const posY = event.clientY - bounds.top + 12;
+
+      if (posX + tooltipBox.offsetWidth > bounds.width) {
+        posX = event.clientX - bounds.left - tooltipBox.offsetWidth - 12;
+      }
+
+      tooltipBox.style.left = posX + 'px';
+      tooltipBox.style.top = posY + 'px';
+    }
+
+    Array.prototype.forEach.call(svgBox.querySelectorAll('.hit'), function (rect) {
+      const index = Number(rect.getAttribute('data-index'));
+      rect.addEventListener('mousemove', function (event) {
+        showTooltip(event, index);
+      });
+      rect.addEventListener('mouseleave', function () {
+        tooltipBox.classList.add('hidden');
+      });
+    });
   }
 
   function showError(message) {
