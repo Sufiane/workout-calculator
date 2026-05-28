@@ -1,6 +1,7 @@
 import { generateBenchProgram } from './service';
 import { appendHistory, getHistory, importHistory } from './history.db';
 import type { HistoryEntry } from './history.db';
+import type { Program } from './types/program.type';
 import { AuthError, enforceRateLimit, login, refresh, signup } from './auth/auth.service';
 import { verifyJwt } from './auth/jwt';
 import { pruneExpiredRates } from './auth/rate.db';
@@ -238,7 +239,18 @@ async function handleImport(request: Request, env: Env, user: SessionUser | null
     return Response.json(history);
 }
 
-async function handleProgram(query: URLSearchParams, env: Env, user: SessionUser | null): Promise<Response> {
+function isValidProgram(value: unknown): value is Program {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const candidate = value as Record<string, unknown>;
+
+    return ['maxRm', 'max90', 'rep85', 'rep90', 'rep95', 'nextMax90'].every((field) => typeof candidate[field] === 'number');
+}
+
+// Compute only — a preview. Saving is a separate, explicit action.
+function handleProgram(query: URLSearchParams): Response {
     if (query.size === 0) {
         return Response.json({
             error: 'You need to specify one query parameter.',
@@ -261,16 +273,37 @@ async function handleProgram(query: URLSearchParams, env: Env, user: SessionUser
             rep95: Number(query.get('rep95')) || undefined,
         });
 
-        if (user) {
-            await appendHistory(env, user.sub, result);
-        }
-
         return Response.json(result);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'invalid_input';
 
         return Response.json({ error: message }, { status: 400 });
     }
+}
+
+async function handleSaveProgram(request: Request, env: Env, user: SessionUser | null): Promise<Response> {
+    if (!user) {
+        return Response.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    let program: unknown;
+
+    try {
+        const body = await request.json<{ program?: unknown }>();
+        program = body.program;
+    } catch {
+        program = undefined;
+    }
+
+    if (!isValidProgram(program)) {
+        return Response.json({ error: 'invalid_program' }, { status: 400 });
+    }
+
+    await appendHistory(env, user.sub, program);
+
+    const history = await getHistory(env, user.sub);
+
+    return Response.json(history);
 }
 
 async function route(request: Request, env: Env): Promise<Response> {
@@ -321,6 +354,12 @@ async function route(request: Request, env: Env): Promise<Response> {
         return handleImport(request, env, user);
     }
 
+    if (path === '/api/history' && request.method === 'POST') {
+        const user = await getUserFromRequest(request, env);
+
+        return handleSaveProgram(request, env, user);
+    }
+
     if (path === '/api/history') {
         const user = await getUserFromRequest(request, env);
 
@@ -328,9 +367,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     }
 
     if (path === '/api/program') {
-        const user = await getUserFromRequest(request, env);
-
-        return handleProgram(url.searchParams, env, user);
+        return handleProgram(url.searchParams);
     }
 
     return handlePage();

@@ -147,6 +147,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .plate-options { display: flex; flex-wrap: wrap; gap: 10px; }
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .plate-options input { width: auto; }
+  #start-program { margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -184,6 +185,11 @@ export const PAGE_HTML = `<!DOCTYPE html>
     </div>
   </div>
 
+  <div class="card" id="program-status-card">
+    <h2>Program status</h2>
+    <div id="program-status"></div>
+  </div>
+
   <div class="card">
     <form id="calc-form">
       <div class="row">
@@ -203,7 +209,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
           <input id="input-value" type="number" step="0.5" min="0" placeholder="100" />
         </div>
       </div>
-      <button type="submit">Calculate</button>
+      <button type="submit">Preview</button>
       <div id="error" class="error hidden"></div>
     </form>
   </div>
@@ -211,6 +217,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
   <div id="result-card" class="card hidden">
     <h2>Your program</h2>
     <div class="grid" id="result-grid"></div>
+    <p class="sub" style="margin: 16px 0 0;">Preview only — not saved until you start it.</p>
+    <button id="start-program" type="button">Start program</button>
     <button id="use-next" class="btn-secondary" type="button"></button>
   </div>
 
@@ -424,7 +432,45 @@ export const PAGE_HTML = `<!DOCTYPE html>
   renderPlates();
 
   const calcButton = form.querySelector('button[type="submit"]');
+  const startButton = document.getElementById('start-program');
+  const statusBox = document.getElementById('program-status');
   const loginButton = document.getElementById('login-btn');
+
+  const PROGRAM_WEEKS = 3;
+  const PROGRAM_DAYS = PROGRAM_WEEKS * 7;
+  let historyEntries = [];
+
+  function activeInfo(entries) {
+    if (!entries || entries.length === 0) {
+      return { state: 'none' };
+    }
+
+    const start = new Date(entries[0].createdAt);
+    const days = (Date.now() - start.getTime()) / 86400000;
+
+    if (days < PROGRAM_DAYS) {
+      return { state: 'active', start: start, week: Math.min(Math.floor(days / 7) + 1, PROGRAM_WEEKS) };
+    }
+
+    return { state: 'ready', start: start };
+  }
+
+  function renderProgramStatus(entries) {
+    const info = activeInfo(entries);
+
+    if (info.state === 'none') {
+      statusBox.innerHTML = '<span class="muted">No active program. Preview a calc, then Start program.</span>';
+      return;
+    }
+
+    const startStr = info.start.toLocaleDateString();
+
+    if (info.state === 'active') {
+      statusBox.innerHTML = '<span class="muted">Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr + '</span>';
+    } else {
+      statusBox.innerHTML = '<span class="muted">Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.</span>';
+    }
+  }
   const signupButton = document.getElementById('signup-btn');
   const logoutButton = document.getElementById('logout-btn');
 
@@ -654,9 +700,57 @@ export const PAGE_HTML = `<!DOCTYPE html>
   }
 
   function render(entries) {
+    historyEntries = entries || [];
     renderHistory(entries);
     renderChart(entries);
+    renderProgramStatus(entries);
   }
+
+  async function startProgram() {
+    if (!lastProgram) {
+      return;
+    }
+
+    const info = activeInfo(historyEntries);
+
+    if (info.state === 'active') {
+      const end = new Date(info.start.getTime() + PROGRAM_DAYS * 86400000).toLocaleDateString();
+
+      if (!window.confirm('Active program until ' + end + '. Replace it with a new block?')) {
+        return;
+      }
+    }
+
+    startPending(startButton);
+
+    try {
+      if (currentUser) {
+        const response = await apiFetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ program: lastProgram }),
+        });
+
+        if (!response.ok) {
+          const body = await response.json();
+          showError(friendlyError(body.error));
+          return;
+        }
+      } else {
+        const entries = readLocalHistory();
+        entries.unshift({ program: lastProgram, createdAt: new Date().toISOString() });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, 20)));
+      }
+
+      await refreshHistory();
+    } catch (error) {
+      showError('Network error. Please try again.');
+    } finally {
+      endPending(startButton);
+    }
+  }
+
+  startButton.addEventListener('click', startProgram);
 
   // Logged in: history comes from the server (D1). Logged out: from localStorage.
   async function refreshHistory() {
@@ -812,14 +906,6 @@ export const PAGE_HTML = `<!DOCTYPE html>
       }
 
       renderResult(body);
-
-      if (!currentUser) {
-        const entries = readLocalHistory();
-        entries.unshift({ program: body, createdAt: new Date().toISOString() });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, 20)));
-      }
-
-      await refreshHistory();
     } catch (error) {
       showError('Network error. Please try again.');
     } finally {
