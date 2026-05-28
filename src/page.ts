@@ -303,6 +303,25 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const inputValue = document.getElementById('input-value');
   const keyHint = document.getElementById('key-hint');
 
+  const calcButton = form.querySelector('button[type="submit"]');
+  const loginButton = document.getElementById('login-btn');
+  const signupButton = document.getElementById('signup-btn');
+  const logoutButton = document.getElementById('logout-btn');
+
+  function startPending(button) {
+    button.dataset.label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Please wait…';
+  }
+
+  function endPending(button) {
+    button.disabled = false;
+
+    if (button.dataset.label !== undefined) {
+      button.textContent = button.dataset.label;
+    }
+  }
+
   const authForm = document.getElementById('auth-form');
   const authStatus = document.getElementById('auth-status');
   const authEmail = document.getElementById('auth-email');
@@ -579,7 +598,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     authError.classList.add('hidden');
   }
 
-  async function submitAuth(path) {
+  async function submitAuth(path, button) {
     clearAuthError();
 
     const email = authEmail.value.trim();
@@ -589,6 +608,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
       showAuthError('Email and password are required.');
       return;
     }
+
+    startPending(button);
 
     try {
       const response = await fetch(path, {
@@ -609,22 +630,30 @@ export const PAGE_HTML = `<!DOCTYPE html>
       await refreshHistory();
     } catch (error) {
       showAuthError('Network error. Please try again.');
+    } finally {
+      endPending(button);
     }
   }
 
   authForm.addEventListener('submit', function (event) {
     event.preventDefault();
-    submitAuth('/api/auth/login');
+    submitAuth('/api/auth/login', loginButton);
   });
 
-  document.getElementById('signup-btn').addEventListener('click', function () {
-    submitAuth('/api/auth/signup');
+  signupButton.addEventListener('click', function () {
+    submitAuth('/api/auth/signup', signupButton);
   });
 
-  document.getElementById('logout-btn').addEventListener('click', async function () {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setUser(null);
-    await refreshHistory();
+  logoutButton.addEventListener('click', async function () {
+    startPending(logoutButton);
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      await refreshHistory();
+    } finally {
+      endPending(logoutButton);
+    }
   });
 
   async function loadSession() {
@@ -649,6 +678,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
       return;
     }
 
+    startPending(calcButton);
+
     try {
       const response = await apiFetch('/api/program?' + key + '=' + encodeURIComponent(value));
       const body = await response.json();
@@ -669,6 +700,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
       await refreshHistory();
     } catch (error) {
       showError('Network error. Please try again.');
+    } finally {
+      endPending(calcButton);
     }
   });
 
