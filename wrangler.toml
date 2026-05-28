@@ -1,6 +1,7 @@
 
 name = "workout-calculator"
 main = "src/index.ts"
+account_id = "316eeeb46903989490edaf0f69637963"
 compatibility_date = "2023-01-01"
 
 compatibility_flags = ["nodejs_compat"] # Example: If you need Node.js compatibility features
