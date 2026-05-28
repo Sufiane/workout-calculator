@@ -144,6 +144,9 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .auth-actions button { flex: 1; margin-top: 0; }
   #auth-status { display: flex; justify-content: space-between; align-items: center; }
   .muted { color: var(--muted); font-size: 14px; }
+  .plate-options { display: flex; flex-wrap: wrap; gap: 10px; }
+  .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
+  .plate-options input { width: auto; }
 </style>
 </head>
 <body>
@@ -209,6 +212,37 @@ export const PAGE_HTML = `<!DOCTYPE html>
     <h2>Your program</h2>
     <div class="grid" id="result-grid"></div>
     <button id="use-next" class="btn-secondary" type="button"></button>
+  </div>
+
+  <div class="card">
+    <h2>Plate breakdown</h2>
+    <div class="row">
+      <div>
+        <label for="bar-weight">Barbell (kg)</label>
+        <select id="bar-weight">
+          <option value="10">10</option>
+          <option value="12.5">12.5</option>
+          <option value="15">15</option>
+          <option value="17.5">17.5</option>
+          <option value="20" selected>20</option>
+          <option value="22.5">22.5</option>
+          <option value="25">25</option>
+        </select>
+      </div>
+      <div>
+        <label>Available plates (kg)</label>
+        <div id="plate-options" class="plate-options">
+          <label><input type="checkbox" value="25" checked /> 25</label>
+          <label><input type="checkbox" value="20" checked /> 20</label>
+          <label><input type="checkbox" value="15" checked /> 15</label>
+          <label><input type="checkbox" value="10" checked /> 10</label>
+          <label><input type="checkbox" value="5" checked /> 5</label>
+          <label><input type="checkbox" value="2.5" checked /> 2.5</label>
+          <label><input type="checkbox" value="1.25" checked /> 1.25</label>
+        </div>
+      </div>
+    </div>
+    <div id="plate-output"></div>
   </div>
 
   <div class="card">
@@ -308,6 +342,86 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const inputKey = document.getElementById('input-key');
   const inputValue = document.getElementById('input-value');
   const keyHint = document.getElementById('key-hint');
+  const barSelect = document.getElementById('bar-weight');
+  const plateOptions = document.getElementById('plate-options');
+  const plateOutput = document.getElementById('plate-output');
+
+  const PLATE_FIELDS = [
+    ['maxRm', '1RM'],
+    ['max90', '90%'],
+    ['rep95', '5x1'],
+    ['rep90', '5x3'],
+    ['rep85', '5x5'],
+  ];
+
+  let lastProgram = null;
+
+  function selectedPlates() {
+    return Array.prototype.slice.call(plateOptions.querySelectorAll('input:checked'))
+      .map(function (input) { return Number(input.value); })
+      .sort(function (left, right) { return right - left; });
+  }
+
+  function loadForTarget(target, bar, plates) {
+    let perSide = (target - bar) / 2;
+
+    if (perSide < 0) {
+      return { below: true };
+    }
+
+    const counts = [];
+
+    plates.forEach(function (plate) {
+      let times = 0;
+
+      while (perSide >= plate - 0.0001) {
+        perSide -= plate;
+        times += 1;
+      }
+
+      if (times > 0) {
+        counts.push(plate + '×' + times);
+      }
+    });
+
+    return { counts: counts, remainder: Math.round(perSide * 100) / 100 };
+  }
+
+  function renderPlates() {
+    if (!lastProgram) {
+      plateOutput.innerHTML = '<div class="empty">Calculate to see plate loading.</div>';
+      return;
+    }
+
+    const bar = Number(barSelect.value);
+    const plates = selectedPlates();
+
+    plateOutput.innerHTML = PLATE_FIELDS
+      .map(function (field) {
+        const target = lastProgram[field[0]];
+        const result = loadForTarget(target, bar, plates);
+        let detail;
+
+        if (result.below) {
+          detail = 'below bar';
+        } else if (result.counts.length === 0) {
+          detail = 'bar only';
+        } else {
+          detail = result.counts.join(', ') + ' /side';
+
+          if (result.remainder > 0) {
+            detail += ' (+' + result.remainder + ' short)';
+          }
+        }
+
+        return '<div class="entry"><span>' + field[1] + ' · ' + target + 'kg</span><span class="when">' + detail + '</span></div>';
+      })
+      .join('');
+  }
+
+  barSelect.addEventListener('change', renderPlates);
+  plateOptions.addEventListener('change', renderPlates);
+  renderPlates();
 
   const calcButton = form.querySelector('button[type="submit"]');
   const loginButton = document.getElementById('login-btn');
@@ -505,6 +619,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
     useNextButton.textContent = 'Use next 90% (' + program.nextMax90 + ' kg)';
     useNextButton.dataset.value = program.nextMax90;
     resultCard.classList.remove('hidden');
+    lastProgram = program;
+    renderPlates();
   }
 
   function renderHistory(entries) {
