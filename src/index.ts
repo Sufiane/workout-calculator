@@ -1,27 +1,54 @@
 import { generateBenchProgram } from './service';
+import { appendHistory, getHistory } from './history.db';
+import { PAGE_HTML } from './page';
 
-const handleProgram = async (query: URLSearchParams, env: Env): Promise<Response> => {
-    const result = generateBenchProgram({
-        maxRm: Number(query.get('maxRm')) || undefined,
-        max90: Number(query.get('max90')) || undefined,
-        rep85: Number(query.get('rep85')) || undefined,
-        rep90: Number(query.get('rep90')) || undefined,
-        rep95: Number(query.get('rep95')) || undefined,
+const handlePage = (): Response => {
+    return new Response(PAGE_HTML, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
-
-    await env.LATEST_VALUE.put('latest', JSON.stringify(result));
-
-    return Response.json(result);
 };
 
 const handleFavicon = (): Response => {
     return new Response(null, { status: 204 });
 };
 
-const handleLatest = async (env: Env): Promise<Response> => {
-    const value = await env.LATEST_VALUE.get('latest');
+const handleHistory = async (env: Env): Promise<Response> => {
+    const history = await getHistory(env);
 
-    return Response.json(value ? JSON.parse(value) : 'no_latest_recorded');
+    return Response.json(history);
+};
+
+const handleProgram = async (query: URLSearchParams, env: Env): Promise<Response> => {
+    if (query.size === 0) {
+        return Response.json({
+            error: 'You need to specify one query parameter.',
+            parameters: {
+                maxRm: 'Your max repetition',
+                max90: '90% of your max repetition',
+                rep85: 'How much you can push doing 5x5',
+                rep90: 'How much you can push doing 5x3',
+                rep95: 'How much you can push doing 5x1',
+            },
+        }, { status: 400 });
+    }
+
+    try {
+        const result = generateBenchProgram({
+            maxRm: Number(query.get('maxRm')) || undefined,
+            max90: Number(query.get('max90')) || undefined,
+            rep85: Number(query.get('rep85')) || undefined,
+            rep90: Number(query.get('rep90')) || undefined,
+            rep95: Number(query.get('rep95')) || undefined,
+        });
+
+        await appendHistory(env, result);
+
+        return Response.json(result);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'invalid_input';
+
+        return Response.json({ error: message }, { status: 400 });
+    }
 };
 
 export default {
@@ -32,25 +59,14 @@ export default {
             return handleFavicon();
         }
 
-        if (url.pathname === '/latest') {
-            return handleLatest(env);
+        if (url.pathname === '/api/history') {
+            return handleHistory(env);
         }
 
-        const query = url.searchParams;
-
-        if (query.size === 0) {
-            return Response.json({
-                instructions: 'You need to specify the query parameters.',
-                parameters: {
-                    maxRm: 'Your max repetition',
-                    max90: '90% of your max repetition',
-                    rep85: 'How much you can push doing 5x5. The load you can push at 85% of your 95% of your max 90. ie: ',
-                    rep90: 'How much you can push doing 5x3rep',
-                    rep95: 'How much you can push doing 5x1rep',
-                },
-            });
+        if (url.pathname === '/api/program') {
+            return handleProgram(url.searchParams, env);
         }
 
-        return handleProgram(query, env);
+        return handlePage();
     },
 };
