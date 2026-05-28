@@ -19,7 +19,8 @@
     "typecheck": "npx tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "publish": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "db:migrate": "wrangler d1 migrations apply workout-db"
   },
   "devDependencies": {
     "@eslint/js": "9.33.0",

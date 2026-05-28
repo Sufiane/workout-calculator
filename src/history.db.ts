@@ -1,6 +1,5 @@
 import { Program } from './types/program.type';
 
-const HISTORY_KEY = 'history';
 const HISTORY_LIMIT = 20;
 
 export interface HistoryEntry {
@@ -8,27 +7,27 @@ export interface HistoryEntry {
     createdAt: string;
 }
 
-export const getHistory = async (env: Env): Promise<HistoryEntry[]> => {
-    const stored = await env.LATEST_VALUE.get(HISTORY_KEY);
+interface HistoryRow {
+    program: string;
+    created_at: string;
+}
 
-    if (!stored) {
-        return [];
-    }
+export const getHistory = async (env: Env, userId: string): Promise<HistoryEntry[]> => {
+    const result = await env.DB.prepare('SELECT program, created_at FROM history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
+        .bind(userId, HISTORY_LIMIT)
+        .all<HistoryRow>();
 
-    return JSON.parse(stored) as HistoryEntry[];
+    return (result.results ?? []).map((row) => ({
+        program: JSON.parse(row.program) as Program,
+        createdAt: row.created_at,
+    }));
 };
 
-export const appendHistory = async (env: Env, program: Program): Promise<HistoryEntry[]> => {
-    const current = await getHistory(env);
+export const appendHistory = async (env: Env, userId: string, program: Program): Promise<void> => {
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
 
-    const entry: HistoryEntry = {
-        program,
-        createdAt: new Date().toISOString(),
-    };
-
-    const next = [entry, ...current].slice(0, HISTORY_LIMIT);
-
-    await env.LATEST_VALUE.put(HISTORY_KEY, JSON.stringify(next));
-
-    return next;
+    await env.DB.prepare('INSERT INTO history (id, user_id, program, created_at) VALUES (?, ?, ?, ?)')
+        .bind(id, userId, JSON.stringify(program), createdAt)
+        .run();
 };

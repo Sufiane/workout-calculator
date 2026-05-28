@@ -90,7 +90,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .entry:first-of-type { border-top: none; }
   .entry .when { color: var(--muted); font-size: 12px; }
   .empty { color: var(--muted); font-size: 14px; }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; }
   .theme-toggle {
     width: auto;
@@ -134,6 +134,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .delta.up { color: #22c55e; }
   .delta.down { color: #ef4444; }
   .delta.flat { color: var(--muted); }
+  .auth-actions { display: flex; gap: 12px; }
+  .auth-actions button { flex: 1; margin-top: 0; }
+  #auth-status { display: flex; justify-content: space-between; align-items: center; }
+  .muted { color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -144,6 +148,31 @@ export const PAGE_HTML = `<!DOCTYPE html>
       <p class="sub">Enter any one value and get your full bench program.</p>
     </div>
     <button id="theme-toggle" class="theme-toggle" type="button">Light</button>
+  </div>
+
+  <div class="card" id="auth-card">
+    <div id="auth-form">
+      <h2>Sign in to save your progress</h2>
+      <div class="row">
+        <div>
+          <label for="auth-email">Email</label>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </div>
+      </div>
+      <div class="auth-actions">
+        <button id="login-btn" type="button">Log in</button>
+        <button id="signup-btn" class="btn-secondary" type="button">Sign up</button>
+      </div>
+      <div id="auth-error" class="error hidden"></div>
+    </div>
+    <div id="auth-status" class="hidden">
+      <span class="muted">Logged in as <strong id="auth-email-label"></strong></span>
+      <button id="logout-btn" class="theme-toggle" type="button">Log out</button>
+    </div>
   </div>
 
   <div class="card">
@@ -209,6 +238,23 @@ export const PAGE_HTML = `<!DOCTYPE html>
     { key: 'rep85', label: '5x5', color: '#a855f7' },
   ];
 
+  let currentUser = null;
+
+  // Wraps API calls: on a 401, refresh the access token once and retry.
+  async function apiFetch(url, options) {
+    let response = await fetch(url, options);
+
+    if (response.status === 401) {
+      const refreshed = await fetch('/api/auth/refresh', { method: 'POST' });
+
+      if (refreshed.ok) {
+        response = await fetch(url, options);
+      }
+    }
+
+    return response;
+  }
+
   const THEME_KEY = 'workout-theme';
   const themeToggle = document.getElementById('theme-toggle');
 
@@ -238,6 +284,13 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const inputKey = document.getElementById('input-key');
   const inputValue = document.getElementById('input-value');
   const keyHint = document.getElementById('key-hint');
+
+  const authForm = document.getElementById('auth-form');
+  const authStatus = document.getElementById('auth-status');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const authEmailLabel = document.getElementById('auth-email-label');
+  const authError = document.getElementById('auth-error');
 
   const HINTS = {
     maxRm: 'The most weight you can lift for a single rep.',
@@ -436,18 +489,108 @@ export const PAGE_HTML = `<!DOCTYPE html>
       .join('');
   }
 
-  async function loadHistory() {
+  function readLocalHistory() {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
+
+  function render(entries) {
+    renderHistory(entries);
+    renderChart(entries);
+  }
+
+  // Logged in: history comes from the server (D1). Logged out: from localStorage.
+  async function refreshHistory() {
+    if (!currentUser) {
+      render(readLocalHistory());
+      return;
+    }
+
     try {
-      const response = await fetch('/api/history');
+      const response = await apiFetch('/api/history');
       const entries = await response.json();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-      renderHistory(entries);
-      renderChart(entries);
+      render(entries);
     } catch (error) {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      const entries = cached ? JSON.parse(cached) : [];
-      renderHistory(entries);
-      renderChart(entries);
+      render([]);
+    }
+  }
+
+  function setUser(user) {
+    currentUser = user;
+
+    if (user) {
+      authEmailLabel.textContent = user.email;
+      authForm.classList.add('hidden');
+      authStatus.classList.remove('hidden');
+    } else {
+      authForm.classList.remove('hidden');
+      authStatus.classList.add('hidden');
+    }
+  }
+
+  function showAuthError(message) {
+    authError.textContent = message;
+    authError.classList.remove('hidden');
+  }
+
+  function clearAuthError() {
+    authError.textContent = '';
+    authError.classList.add('hidden');
+  }
+
+  async function submitAuth(path) {
+    clearAuthError();
+
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+
+    if (email === '' || password === '') {
+      showAuthError('Email and password are required.');
+      return;
+    }
+
+    try {
+      const response = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        showAuthError(body.error || 'Authentication failed.');
+        return;
+      }
+
+      authPassword.value = '';
+      setUser({ email: body.email });
+      await refreshHistory();
+    } catch (error) {
+      showAuthError('Network error. Please try again.');
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', function () {
+    submitAuth('/api/auth/login');
+  });
+
+  document.getElementById('signup-btn').addEventListener('click', function () {
+    submitAuth('/api/auth/signup');
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async function () {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    await refreshHistory();
+  });
+
+  async function loadSession() {
+    try {
+      const response = await fetch('/api/auth/me');
+      const user = await response.json();
+      setUser(user);
+    } catch (error) {
+      setUser(null);
     }
   }
 
@@ -455,8 +598,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
     event.preventDefault();
     clearError();
 
-    const key = document.getElementById('input-key').value;
-    const value = document.getElementById('input-value').value;
+    const key = inputKey.value;
+    const value = inputValue.value;
 
     if (value === '') {
       showError('Please enter a value.');
@@ -464,7 +607,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
 
     try {
-      const response = await fetch('/api/program?' + key + '=' + encodeURIComponent(value));
+      const response = await apiFetch('/api/program?' + key + '=' + encodeURIComponent(value));
       const body = await response.json();
 
       if (!response.ok) {
@@ -473,13 +616,23 @@ export const PAGE_HTML = `<!DOCTYPE html>
       }
 
       renderResult(body);
-      await loadHistory();
+
+      if (!currentUser) {
+        const entries = readLocalHistory();
+        entries.unshift({ program: body, createdAt: new Date().toISOString() });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, 20)));
+      }
+
+      await refreshHistory();
     } catch (error) {
       showError('Network error. Please try again.');
     }
   });
 
-  loadHistory();
+  (async function init() {
+    await loadSession();
+    await refreshHistory();
+  })();
 </script>
 </body>
 </html>`;

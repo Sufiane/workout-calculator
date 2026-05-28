@@ -140,3 +140,6 @@ dist
 
 # macOS
 .DS_Store
+
+# Cloudflare dev secrets
+.dev.vars
