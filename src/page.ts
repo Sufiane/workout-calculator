@@ -107,6 +107,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .btn-secondary {
+    margin-top: 16px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -145,6 +151,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   <div id="result-card" class="card hidden">
     <h2>Your program</h2>
     <div class="grid" id="result-grid"></div>
+    <button id="use-next" class="btn-secondary" type="button"></button>
   </div>
 
   <div class="card">
@@ -200,6 +207,15 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const historyBox = document.getElementById('history');
   const chartBox = document.getElementById('chart');
   const legendBox = document.getElementById('legend');
+  const useNextButton = document.getElementById('use-next');
+  const inputKey = document.getElementById('input-key');
+  const inputValue = document.getElementById('input-value');
+
+  useNextButton.addEventListener('click', function () {
+    inputKey.value = 'max90';
+    inputValue.value = useNextButton.dataset.value;
+    form.requestSubmit();
+  });
 
   function renderChart(entries) {
     const ordered = (entries || []).slice().reverse();
@@ -308,6 +324,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
         return '<div class="metric"><div class="k">' + field[1] + '</div><div class="v">' + program[field[0]] + '</div></div>';
       })
       .join('');
+    useNextButton.textContent = 'Use next 90% (' + program.nextMax90 + ' kg)';
+    useNextButton.dataset.value = program.nextMax90;
     resultCard.classList.remove('hidden');
   }
 
