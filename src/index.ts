@@ -3,6 +3,7 @@ import { appendHistory, getHistory, importHistory } from './history.db';
 import type { HistoryEntry } from './history.db';
 import { AuthError, enforceRateLimit, login, refresh, signup } from './auth/auth.service';
 import { verifyJwt } from './auth/jwt';
+import { pruneExpiredRates } from './auth/rate.db';
 import { PAGE_HTML } from './page';
 import { ICON_SVG, MANIFEST, SERVICE_WORKER } from './pwa';
 import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS } from './auth/auth.service';
@@ -310,5 +311,9 @@ export default {
         }
 
         return handlePage();
+    },
+
+    async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+        await pruneExpiredRates(env, Date.now());
     },
 };

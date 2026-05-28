@@ -17,3 +17,9 @@ export const setRate = async (env: Env, key: string, count: number, resetAt: num
         .bind(key, count, resetAt)
         .run();
 };
+
+export const pruneExpiredRates = async (env: Env, now: number): Promise<void> => {
+    await env.DB.prepare('DELETE FROM rate_limits WHERE reset_at < ?')
+        .bind(now)
+        .run();
+};

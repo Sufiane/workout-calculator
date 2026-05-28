@@ -6,6 +6,9 @@ compatibility_date = "2023-01-01"
 
 compatibility_flags = ["nodejs_compat"] # Example: If you need Node.js compatibility features
 
+[triggers]
+crons = ["0 0 * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "workout-db"
