@@ -17,7 +17,7 @@
     "build": "npx tsc",
     "lint": "eslint .",
     "typecheck": "npx tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "publish": "wrangler deploy",
     "dev": "wrangler dev",
     "db:migrate": "wrangler d1 migrations apply workout-db"
@@ -30,6 +30,7 @@
     "jiti": "2.5.1",
     "typescript": "5.8.3",
     "typescript-eslint": "8.39.1",
+    "vitest": "4.1.7",
     "wrangler": "4.14.4"
   }
 }
