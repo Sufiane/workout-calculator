@@ -8,4 +8,4 @@ compatibility_flags = ["nodejs_compat"] # Example: If you need Node.js compatibi
 [[d1_databases]]
 binding = "DB"
 database_name = "workout-db"
-database_id = "local-workout-db"
+database_id = "3a53e3e5-c967-4033-8d99-88cf3fff907d"
