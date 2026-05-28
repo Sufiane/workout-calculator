@@ -1,5 +1,6 @@
 import { generateBenchProgram } from './service';
-import { appendHistory, getHistory } from './history.db';
+import { appendHistory, getHistory, importHistory } from './history.db';
+import type { HistoryEntry } from './history.db';
 import { AuthError, enforceRateLimit, login, refresh, signup } from './auth/auth.service';
 import { verifyJwt } from './auth/jwt';
 import { PAGE_HTML } from './page';
@@ -166,6 +167,30 @@ async function handleHistory(env: Env, user: SessionUser | null): Promise<Respon
     return Response.json(history);
 }
 
+async function handleImport(request: Request, env: Env, user: SessionUser | null): Promise<Response> {
+    if (!user) {
+        return Response.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    let entries: HistoryEntry[] = [];
+
+    try {
+        const body = await request.json<{ entries?: HistoryEntry[] }>();
+        const candidates = Array.isArray(body.entries) ? body.entries : [];
+        entries = candidates
+            .filter((entry) => entry && typeof entry.createdAt === 'string' && entry.program != null)
+            .slice(0, 20);
+    } catch {
+        entries = [];
+    }
+
+    await importHistory(env, user.sub, entries);
+
+    const history = await getHistory(env, user.sub);
+
+    return Response.json(history);
+}
+
 async function handleProgram(query: URLSearchParams, env: Env, user: SessionUser | null): Promise<Response> {
     if (query.size === 0) {
         return Response.json({
@@ -230,6 +255,12 @@ export default {
             const user = await getUserFromRequest(request, env);
 
             return handleMe(user);
+        }
+
+        if (path === '/api/history/import' && request.method === 'POST') {
+            const user = await getUserFromRequest(request, env);
+
+            return handleImport(request, env, user);
         }
 
         if (path === '/api/history') {

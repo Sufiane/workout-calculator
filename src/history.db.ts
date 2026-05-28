@@ -31,3 +31,13 @@ export const appendHistory = async (env: Env, userId: string, program: Program):
         .bind(id, userId, JSON.stringify(program), createdAt)
         .run();
 };
+
+export const importHistory = async (env: Env, userId: string, entries: HistoryEntry[]): Promise<void> => {
+    for (const entry of entries) {
+        const id = crypto.randomUUID();
+
+        await env.DB.prepare('INSERT INTO history (id, user_id, program, created_at) VALUES (?, ?, ?, ?)')
+            .bind(id, userId, JSON.stringify(entry.program), entry.createdAt)
+            .run();
+    }
+};

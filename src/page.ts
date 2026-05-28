@@ -546,6 +546,29 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
   }
 
+  // After login/signup, push any anonymous localStorage history into the account.
+  async function importLocalHistory() {
+    const entries = readLocalHistory();
+
+    if (entries.length === 0) {
+      return;
+    }
+
+    try {
+      const response = await apiFetch('/api/history/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: entries }),
+      });
+
+      if (response.ok) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      // Leave localStorage intact if the import fails.
+    }
+  }
+
   function showAuthError(message) {
     authError.textContent = message;
     authError.classList.remove('hidden');
@@ -582,6 +605,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
       authPassword.value = '';
       setUser({ email: body.email });
+      await importLocalHistory();
       await refreshHistory();
     } catch (error) {
       showAuthError('Network error. Please try again.');
