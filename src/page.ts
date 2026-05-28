@@ -238,6 +238,24 @@ export const PAGE_HTML = `<!DOCTYPE html>
     { key: 'rep85', label: '5x5', color: '#a855f7' },
   ];
 
+  const ERROR_MESSAGES = {
+    invalid_email: 'Please enter a valid email address.',
+    weak_password: 'Password must be at least 8 characters.',
+    email_taken: 'That email is already registered. Try logging in.',
+    invalid_credentials: 'Wrong email or password.',
+    invalid_token: 'Your session expired. Please log in again.',
+    no_refresh: 'Your session expired. Please log in again.',
+    rate_limited: 'Too many attempts. Wait a minute and try again.',
+    auth_failed: 'Something went wrong. Please try again.',
+    min_one_ref_value_needed: 'Enter a value to calculate.',
+    missing_params: 'Enter a value to calculate.',
+    invalid_input: 'That value is not valid.',
+  };
+
+  function friendlyError(code) {
+    return ERROR_MESSAGES[code] || 'Something went wrong. Please try again.';
+  }
+
   let currentUser = null;
 
   // Wraps API calls: on a 401, refresh the access token once and retry.
@@ -558,7 +576,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
       const body = await response.json();
 
       if (!response.ok) {
-        showAuthError(body.error || 'Authentication failed.');
+        showAuthError(friendlyError(body.error));
         return;
       }
 
@@ -611,7 +629,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
       const body = await response.json();
 
       if (!response.ok) {
-        showError(body.error || 'Something went wrong.');
+        showError(friendlyError(body.error));
         return;
       }
 
