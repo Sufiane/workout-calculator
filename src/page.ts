@@ -103,6 +103,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
     font-weight: 500;
     cursor: pointer;
   }
+  #chart svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
 </style>
 </head>
 <body>
@@ -144,6 +148,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
   </div>
 
   <div class="card">
+    <h2>Progression</h2>
+    <div id="chart"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="card">
     <h2>Previous calculations</h2>
     <div id="history"></div>
   </div>
@@ -158,6 +168,13 @@ export const PAGE_HTML = `<!DOCTYPE html>
     ['rep90', '5x3'],
     ['rep95', '5x1'],
     ['nextMax90', 'Next 90%'],
+  ];
+  const SERIES = [
+    { key: 'maxRm', label: '1RM', color: '#4f8cff' },
+    { key: 'max90', label: '90%', color: '#22c55e' },
+    { key: 'rep95', label: '5x1', color: '#f59e0b' },
+    { key: 'rep90', label: '5x3', color: '#ef4444' },
+    { key: 'rep85', label: '5x5', color: '#a855f7' },
   ];
 
   const THEME_KEY = 'workout-theme';
@@ -181,6 +198,99 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const resultCard = document.getElementById('result-card');
   const resultGrid = document.getElementById('result-grid');
   const historyBox = document.getElementById('history');
+  const chartBox = document.getElementById('chart');
+  const legendBox = document.getElementById('legend');
+
+  function renderChart(entries) {
+    const ordered = (entries || []).slice().reverse();
+
+    if (ordered.length === 0) {
+      chartBox.innerHTML = '<div class="empty">No data yet.</div>';
+      legendBox.innerHTML = '';
+      return;
+    }
+
+    const width = 540;
+    const height = 260;
+    const left = 44;
+    const right = 16;
+    const top = 16;
+    const bottom = 36;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+
+    let min = Infinity;
+    let max = -Infinity;
+    ordered.forEach(function (entry) {
+      SERIES.forEach(function (series) {
+        const value = entry.program[series.key];
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      });
+    });
+
+    const pad = max === min ? 2.5 : (max - min) * 0.1;
+    const minP = min - pad;
+    const maxP = max + pad;
+
+    function xFor(index) {
+      if (ordered.length === 1) {
+        return left + plotW / 2;
+      }
+      return left + (index / (ordered.length - 1)) * plotW;
+    }
+
+    function yFor(value) {
+      return top + (1 - (value - minP) / (maxP - minP)) * plotH;
+    }
+
+    function shortDate(iso) {
+      const date = new Date(iso);
+      return (date.getMonth() + 1) + '/' + date.getDate();
+    }
+
+    let svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img">';
+
+    [maxP, (maxP + minP) / 2, minP].forEach(function (value) {
+      const yPos = yFor(value);
+      svg += '<line x1="' + left + '" y1="' + yPos + '" x2="' + (width - right) + '" y2="' + yPos + '" stroke="var(--line)" stroke-width="1" />';
+      svg += '<text x="' + (left - 6) + '" y="' + (yPos + 4) + '" fill="var(--muted)" font-size="11" text-anchor="end">' + Math.round(value) + '</text>';
+    });
+
+    const xTicks = ordered.length === 1 ? [0] : [0, Math.floor((ordered.length - 1) / 2), ordered.length - 1];
+    xTicks.forEach(function (index, position) {
+      const anchor = position === 0 ? 'start' : position === xTicks.length - 1 ? 'end' : 'middle';
+      svg += '<text x="' + xFor(index) + '" y="' + (height - 12) + '" fill="var(--muted)" font-size="11" text-anchor="' + anchor + '">' + shortDate(ordered[index].createdAt) + '</text>';
+    });
+
+    SERIES.forEach(function (series) {
+      const points = ordered
+        .map(function (entry, index) {
+          return xFor(index) + ',' + yFor(entry.program[series.key]);
+        })
+        .join(' ');
+
+      if (ordered.length > 1) {
+        svg += '<polyline fill="none" stroke="' + series.color + '" stroke-width="2" points="' + points + '" />';
+      }
+
+      ordered.forEach(function (entry, index) {
+        const isLast = index === ordered.length - 1;
+        const radius = isLast ? 6 : 3;
+        const extra = isLast ? ' stroke="var(--card)" stroke-width="2"' : '';
+        svg += '<circle cx="' + xFor(index) + '" cy="' + yFor(entry.program[series.key]) + '" r="' + radius + '" fill="' + series.color + '"' + extra + ' />';
+      });
+    });
+
+    svg += '</svg>';
+    chartBox.innerHTML = svg;
+
+    legendBox.innerHTML = SERIES
+      .map(function (series) {
+        return '<span><span class="dot" style="background:' + series.color + '"></span>' + series.label + '</span>';
+      })
+      .join('');
+  }
 
   function showError(message) {
     errorBox.textContent = message;
@@ -222,9 +332,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
       const entries = await response.json();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
       renderHistory(entries);
+      renderChart(entries);
     } catch (error) {
       const cached = localStorage.getItem(STORAGE_KEY);
-      renderHistory(cached ? JSON.parse(cached) : []);
+      const entries = cached ? JSON.parse(cached) : [];
+      renderHistory(entries);
+      renderChart(entries);
     }
   }
 
