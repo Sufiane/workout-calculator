@@ -45,7 +45,9 @@ const handlePage = (): Response => {
 };
 
 const handleFavicon = (): Response => {
-    return new Response(null, { status: 204 });
+    return new Response(ICON_SVG, {
+        headers: { 'Content-Type': 'image/svg+xml' },
+    });
 };
 
 const handleManifest = (): Response => {
