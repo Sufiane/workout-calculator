@@ -13,9 +13,33 @@ interface SessionUser {
     email: string;
 }
 
+const CONTENT_SECURITY_POLICY = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+].join('; ');
+
+function applySecurityHeaders(response: Response): Response {
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+    return response;
+}
+
 const handlePage = (): Response => {
     return new Response(PAGE_HTML, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Security-Policy': CONTENT_SECURITY_POLICY,
+            'X-Frame-Options': 'DENY',
+        },
     });
 };
 
@@ -249,68 +273,74 @@ async function handleProgram(query: URLSearchParams, env: Env, user: SessionUser
     }
 }
 
+async function route(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (path === '/favicon.ico') {
+        return handleFavicon();
+    }
+
+    if (path === '/manifest.webmanifest') {
+        return handleManifest();
+    }
+
+    if (path === '/sw.js') {
+        return handleServiceWorker();
+    }
+
+    if (path === '/icon.svg') {
+        return handleIcon();
+    }
+
+    if (path === '/api/auth/signup' && request.method === 'POST') {
+        return handleSignup(request, env);
+    }
+
+    if (path === '/api/auth/login' && request.method === 'POST') {
+        return handleLogin(request, env);
+    }
+
+    if (path === '/api/auth/refresh' && request.method === 'POST') {
+        return handleRefresh(request, env);
+    }
+
+    if (path === '/api/auth/logout' && request.method === 'POST') {
+        return handleLogout();
+    }
+
+    if (path === '/api/auth/me') {
+        const user = await getUserFromRequest(request, env);
+
+        return handleMe(user);
+    }
+
+    if (path === '/api/history/import' && request.method === 'POST') {
+        const user = await getUserFromRequest(request, env);
+
+        return handleImport(request, env, user);
+    }
+
+    if (path === '/api/history') {
+        const user = await getUserFromRequest(request, env);
+
+        return handleHistory(env, user);
+    }
+
+    if (path === '/api/program') {
+        const user = await getUserFromRequest(request, env);
+
+        return handleProgram(url.searchParams, env, user);
+    }
+
+    return handlePage();
+}
+
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
-        const url = new URL(request.url);
-        const path = url.pathname;
+        const response = await route(request, env);
 
-        if (path === '/favicon.ico') {
-            return handleFavicon();
-        }
-
-        if (path === '/manifest.webmanifest') {
-            return handleManifest();
-        }
-
-        if (path === '/sw.js') {
-            return handleServiceWorker();
-        }
-
-        if (path === '/icon.svg') {
-            return handleIcon();
-        }
-
-        if (path === '/api/auth/signup' && request.method === 'POST') {
-            return handleSignup(request, env);
-        }
-
-        if (path === '/api/auth/login' && request.method === 'POST') {
-            return handleLogin(request, env);
-        }
-
-        if (path === '/api/auth/refresh' && request.method === 'POST') {
-            return handleRefresh(request, env);
-        }
-
-        if (path === '/api/auth/logout' && request.method === 'POST') {
-            return handleLogout();
-        }
-
-        if (path === '/api/auth/me') {
-            const user = await getUserFromRequest(request, env);
-
-            return handleMe(user);
-        }
-
-        if (path === '/api/history/import' && request.method === 'POST') {
-            const user = await getUserFromRequest(request, env);
-
-            return handleImport(request, env, user);
-        }
-
-        if (path === '/api/history') {
-            const user = await getUserFromRequest(request, env);
-
-            return handleHistory(env, user);
-        }
-
-        if (path === '/api/program') {
-            const user = await getUserFromRequest(request, env);
-
-            return handleProgram(url.searchParams, env, user);
-        }
-
-        return handlePage();
+        return applySecurityHeaders(response);
     },
 
     async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
