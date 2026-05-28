@@ -151,7 +151,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   </div>
 
   <div class="card" id="auth-card">
-    <div id="auth-form">
+    <form id="auth-form">
       <h2>Sign in to save your progress</h2>
       <div class="row">
         <div>
@@ -164,11 +164,11 @@ export const PAGE_HTML = `<!DOCTYPE html>
         </div>
       </div>
       <div class="auth-actions">
-        <button id="login-btn" type="button">Log in</button>
+        <button id="login-btn" type="submit">Log in</button>
         <button id="signup-btn" class="btn-secondary" type="button">Sign up</button>
       </div>
       <div id="auth-error" class="error hidden"></div>
-    </div>
+    </form>
     <div id="auth-status" class="hidden">
       <span class="muted">Logged in as <strong id="auth-email-label"></strong></span>
       <button id="logout-btn" class="theme-toggle" type="button">Log out</button>
@@ -588,7 +588,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
   }
 
-  document.getElementById('login-btn').addEventListener('click', function () {
+  authForm.addEventListener('submit', function (event) {
+    event.preventDefault();
     submitAuth('/api/auth/login');
   });
 
