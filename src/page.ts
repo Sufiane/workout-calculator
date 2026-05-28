@@ -148,6 +148,16 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .plate-options input { width: auto; }
   #start-program { margin-top: 12px; }
+  .warning-banner {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid #ef4444;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
 </style>
 </head>
 <body>
@@ -159,6 +169,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
     </div>
     <button id="theme-toggle" class="theme-toggle" type="button">Light</button>
   </div>
+
+  <div id="anon-warning" class="warning-banner hidden">⚠️ <strong>You're not signed in.</strong> Your program and history live only in this browser and can be lost if you clear data or switch devices. <strong>Sign in below</strong> to save them.</div>
 
   <div class="card" id="auth-card">
     <form id="auth-form">
@@ -502,6 +514,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const authPassword = document.getElementById('auth-password');
   const authEmailLabel = document.getElementById('auth-email-label');
   const authError = document.getElementById('auth-error');
+  const anonWarning = document.getElementById('anon-warning');
 
   const HINTS = {
     maxRm: 'The most weight you can lift for a single rep.',
@@ -783,9 +796,11 @@ export const PAGE_HTML = `<!DOCTYPE html>
       authEmailLabel.textContent = user.email;
       authForm.classList.add('hidden');
       authStatus.classList.remove('hidden');
+      anonWarning.classList.add('hidden');
     } else {
       authForm.classList.remove('hidden');
       authStatus.classList.add('hidden');
+      anonWarning.classList.remove('hidden');
     }
   }
 
