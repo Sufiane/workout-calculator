@@ -546,6 +546,23 @@ export const PAGE_HTML = `<!DOCTYPE html>
       return;
     }
 
+    // Project remaining sessions of the current 3-week block as future points.
+    const latest = ordered[ordered.length - 1];
+    const blockStart = new Date(latest.createdAt);
+    const elapsedDays = (Date.now() - blockStart.getTime()) / 86400000;
+    const currentWeek = Math.floor(elapsedDays / 7) + 1;
+    const projected = [];
+
+    if (elapsedDays < PROGRAM_DAYS && currentWeek < PROGRAM_WEEKS) {
+      for (let week = currentWeek + 1; week <= PROGRAM_WEEKS; week++) {
+        const futureDate = new Date(blockStart.getTime() + (week - 1) * 7 * 86400000);
+        projected.push({ program: latest.program, createdAt: futureDate.toISOString() });
+      }
+    }
+
+    const histLen = ordered.length;
+    const points = ordered.concat(projected);
+
     const width = 540;
     const height = 260;
     const left = 44;
@@ -557,7 +574,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
     let min = Infinity;
     let max = -Infinity;
-    ordered.forEach(function (entry) {
+    points.forEach(function (entry) {
       SERIES.forEach(function (series) {
         const value = entry.program[series.key];
         min = Math.min(min, value);
@@ -570,10 +587,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
     const maxP = max + pad;
 
     function xFor(index) {
-      if (ordered.length === 1) {
+      if (points.length === 1) {
         return left + plotW / 2;
       }
-      return left + (index / (ordered.length - 1)) * plotW;
+      return left + (index / (points.length - 1)) * plotW;
     }
 
     function yFor(value) {
@@ -593,33 +610,52 @@ export const PAGE_HTML = `<!DOCTYPE html>
       svg += '<text x="' + (left - 6) + '" y="' + (yPos + 4) + '" fill="var(--muted)" font-size="11" text-anchor="end">' + Math.round(value) + '</text>';
     });
 
-    const xTicks = ordered.length === 1 ? [0] : [0, Math.floor((ordered.length - 1) / 2), ordered.length - 1];
+    const xTicks = points.length === 1 ? [0] : [0, Math.floor((points.length - 1) / 2), points.length - 1];
     xTicks.forEach(function (index, position) {
       const anchor = position === 0 ? 'start' : position === xTicks.length - 1 ? 'end' : 'middle';
-      svg += '<text x="' + xFor(index) + '" y="' + (height - 12) + '" fill="var(--muted)" font-size="11" text-anchor="' + anchor + '">' + shortDate(ordered[index].createdAt) + '</text>';
+      svg += '<text x="' + xFor(index) + '" y="' + (height - 12) + '" fill="var(--muted)" font-size="11" text-anchor="' + anchor + '">' + shortDate(points[index].createdAt) + '</text>';
     });
 
     SERIES.forEach(function (series) {
-      const points = ordered
-        .map(function (entry, index) {
-          return xFor(index) + ',' + yFor(entry.program[series.key]);
-        })
-        .join(' ');
-
-      if (ordered.length > 1) {
-        svg += '<polyline fill="none" stroke="' + series.color + '" stroke-width="2" points="' + points + '" />';
+      // Solid line over historical points.
+      if (histLen > 1) {
+        const histPts = ordered
+          .map(function (entry, index) {
+            return xFor(index) + ',' + yFor(entry.program[series.key]);
+          })
+          .join(' ');
+        svg += '<polyline fill="none" stroke="' + series.color + '" stroke-width="2" points="' + histPts + '" />';
       }
 
-      ordered.forEach(function (entry, index) {
-        const isLast = index === ordered.length - 1;
-        const radius = isLast ? 6 : 3;
-        const extra = isLast ? ' stroke="var(--card)" stroke-width="2"' : '';
-        svg += '<circle cx="' + xFor(index) + '" cy="' + yFor(entry.program[series.key]) + '" r="' + radius + '" fill="' + series.color + '"' + extra + ' />';
+      // Dashed line bridging the current point into the projected sessions.
+      if (projected.length > 0) {
+        const bridge = [ordered[histLen - 1]].concat(projected);
+        const bridgePts = bridge
+          .map(function (entry, idx) {
+            const realIndex = histLen - 1 + idx;
+            return xFor(realIndex) + ',' + yFor(entry.program[series.key]);
+          })
+          .join(' ');
+        svg += '<polyline fill="none" stroke="' + series.color + '" stroke-width="2" stroke-dasharray="4 4" points="' + bridgePts + '" />';
+      }
+
+      points.forEach(function (entry, index) {
+        const isProjected = index >= histLen;
+        const isLastHistorical = index === histLen - 1;
+
+        if (isProjected) {
+          // Open circle for upcoming sessions.
+          svg += '<circle cx="' + xFor(index) + '" cy="' + yFor(entry.program[series.key]) + '" r="4" fill="var(--card)" stroke="' + series.color + '" stroke-width="2" />';
+        } else if (isLastHistorical) {
+          svg += '<circle cx="' + xFor(index) + '" cy="' + yFor(entry.program[series.key]) + '" r="6" fill="' + series.color + '" stroke="var(--card)" stroke-width="2" />';
+        } else {
+          svg += '<circle cx="' + xFor(index) + '" cy="' + yFor(entry.program[series.key]) + '" r="3" fill="' + series.color + '" />';
+        }
       });
     });
 
-    const step = ordered.length === 1 ? plotW : plotW / (ordered.length - 1);
-    ordered.forEach(function (entry, index) {
+    const step = points.length === 1 ? plotW : plotW / (points.length - 1);
+    points.forEach(function (entry, index) {
       const colX = xFor(index) - step / 2;
       svg += '<rect class="hit" data-index="' + index + '" x="' + colX + '" y="' + top + '" width="' + step + '" height="' + plotH + '" fill="transparent" />';
     });
@@ -631,17 +667,19 @@ export const PAGE_HTML = `<!DOCTYPE html>
       .map(function (series) {
         return '<span><span class="dot" style="background:' + series.color + '"></span>' + series.label + '</span>';
       })
-      .join('');
+      .join('') + '<span class="muted" style="margin-left: 4px;">· open dots = upcoming sessions</span>';
 
     function showTooltip(event, index) {
-      const entry = ordered[index];
+      const entry = points[index];
       const when = new Date(entry.createdAt).toLocaleString();
+      const isProjected = index >= histLen;
+      const dateLabel = isProjected ? 'Next session · ' + when : when;
       const rows = SERIES
         .map(function (series) {
           return '<div class="tt-row"><span class="dot" style="background:' + series.color + '"></span>' + series.label + '<span class="tt-val">' + entry.program[series.key] + '</span></div>';
         })
         .join('');
-      tooltipBox.innerHTML = '<div class="tt-date">' + when + '</div>' + rows;
+      tooltipBox.innerHTML = '<div class="tt-date">' + dateLabel + '</div>' + rows;
       tooltipBox.classList.remove('hidden');
 
       const bounds = chartBox.getBoundingClientRect();
