@@ -845,6 +845,18 @@ export const PAGE_HTML = `<!DOCTYPE html>
     renderToday(entries);
   }
 
+  function flashConfirmation(button, message, durationMs) {
+    const original = button.dataset.flashOriginal || button.textContent;
+    button.dataset.flashOriginal = original;
+    button.disabled = true;
+    button.textContent = message;
+    setTimeout(function () {
+      button.textContent = original;
+      button.disabled = false;
+      delete button.dataset.flashOriginal;
+    }, durationMs);
+  }
+
   async function startProgram() {
     if (!lastProgram) {
       return;
@@ -861,6 +873,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
 
     startPending(startButton);
+
+    let success = false;
 
     try {
       if (currentUser) {
@@ -882,10 +896,15 @@ export const PAGE_HTML = `<!DOCTYPE html>
       }
 
       await refreshHistory();
+      success = true;
     } catch (error) {
       showError('Network error. Please try again.');
     } finally {
       endPending(startButton);
+    }
+
+    if (success) {
+      flashConfirmation(startButton, 'Started ✓ week 1 of 3', 1500);
     }
   }
 
