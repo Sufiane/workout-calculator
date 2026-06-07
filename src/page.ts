@@ -142,7 +142,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .delta.flat { color: var(--muted); }
   .auth-actions { display: flex; gap: 12px; }
   .auth-actions button { flex: 1; margin-top: 0; }
-  #auth-status { display: flex; justify-content: space-between; align-items: center; }
+  #auth-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  #auth-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .muted { color: var(--muted); font-size: 14px; }
   .plate-options { display: flex; flex-wrap: wrap; gap: 10px; }
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
@@ -235,9 +236,9 @@ export const PAGE_HTML = `<!DOCTYPE html>
           <select id="input-key">
             <option value="maxRm">1 rep max</option>
             <option value="max90">90% of max</option>
-            <option value="rep95">5x1 (rep95)</option>
-            <option value="rep90">5x3 (rep90)</option>
-            <option value="rep85">5x5 (rep85)</option>
+            <option value="rep95">5×1 singles</option>
+            <option value="rep90">5×3 triples</option>
+            <option value="rep85">5×5 working sets</option>
           </select>
           <small id="key-hint" class="hint"></small>
         </div>
@@ -308,12 +309,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
 <script>
   const STORAGE_KEY = 'workout-history';
   const FIELDS = [
+    ['rep85', '5×5 working sets'],
+    ['rep90', '5×3 triples'],
+    ['rep95', '5×1 singles'],
+    ['max90', '90% of max'],
     ['maxRm', '1RM'],
-    ['max90', 'Max 90%'],
-    ['rep85', '5x5'],
-    ['rep90', '5x3'],
-    ['rep95', '5x1'],
-    ['nextMax90', 'Next 90%'],
+    ['nextMax90', 'Next block 90%'],
   ];
   const SERIES = [
     { key: 'maxRm', label: '1RM', color: '#4f8cff' },
