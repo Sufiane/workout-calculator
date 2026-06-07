@@ -148,6 +148,41 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .plate-options input { width: auto; }
   #start-program { margin-top: 12px; }
+  .today-eyebrow {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .today-load {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 4px 0 10px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .today-weight {
+    font-size: clamp(56px, 11vw, 88px);
+    font-weight: 700;
+  }
+  .today-unit {
+    font-size: 20px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .today-plates {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .today-plates .short { color: #ef4444; font-weight: 600; }
+  .today-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
 </style>
 </head>
 <body>
@@ -184,6 +219,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
       <button id="logout-btn" class="theme-toggle" type="button">Log out</button>
     </div>
   </div>
+
+  <div class="card hidden" id="today-card"></div>
 
   <div class="card" id="program-status-card">
     <h2>Program status</h2>
@@ -353,6 +390,15 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const barSelect = document.getElementById('bar-weight');
   const plateOptions = document.getElementById('plate-options');
   const plateOutput = document.getElementById('plate-output');
+  const todayCard = document.getElementById('today-card');
+  const programStatusCard = document.getElementById('program-status-card');
+
+  // Week -> the working lift typically performed that week of a 5/3/1-style block.
+  const WEEK_LIFTS = [
+    { key: 'rep85', label: '5×5 working sets' },
+    { key: 'rep90', label: '5×3 triples' },
+    { key: 'rep95', label: '5×1 singles' },
+  ];
 
   const PLATE_FIELDS = [
     ['maxRm', '1RM'],
@@ -427,8 +473,13 @@ export const PAGE_HTML = `<!DOCTYPE html>
       .join('');
   }
 
-  barSelect.addEventListener('change', renderPlates);
-  plateOptions.addEventListener('change', renderPlates);
+  function refreshDerived() {
+    renderPlates();
+    renderToday(historyEntries);
+  }
+
+  barSelect.addEventListener('change', refreshDerived);
+  plateOptions.addEventListener('change', refreshDerived);
   renderPlates();
 
   const calcButton = form.querySelector('button[type="submit"]');
@@ -453,6 +504,55 @@ export const PAGE_HTML = `<!DOCTYPE html>
     }
 
     return { state: 'ready', start: start };
+  }
+
+  function formatPlateList(result) {
+    if (result.below) {
+      return '<span class="muted">target is below the bar</span>';
+    }
+
+    if (result.counts.length === 0) {
+      return 'bar only';
+    }
+
+    let detail = result.counts.join(', ') + ' / side';
+
+    if (result.remainder > 0) {
+      detail += ' <span class="short">(+' + result.remainder + ' kg short)</span>';
+    }
+
+    return detail;
+  }
+
+  function renderToday(entries) {
+    const info = activeInfo(entries);
+
+    if (info.state !== 'active') {
+      todayCard.classList.add('hidden');
+      programStatusCard.classList.remove('hidden');
+      return;
+    }
+
+    const latest = entries[0];
+    const lift = WEEK_LIFTS[info.week - 1];
+    const weight = latest.program[lift.key];
+    const bar = Number(barSelect.value);
+    const plates = selectedPlates();
+    const load = loadForTarget(weight, bar, plates);
+
+    const startMs = info.start.getTime();
+    const elapsedDays = Math.max(0, Math.floor((Date.now() - startMs) / 86400000));
+    const endStr = new Date(startMs + PROGRAM_DAYS * 86400000).toLocaleDateString();
+    const elapsedLabel = elapsedDays === 0 ? 'today' : elapsedDays === 1 ? '1 day ago' : elapsedDays + ' days ago';
+
+    todayCard.innerHTML =
+      '<div class="today-eyebrow">Today · Week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · ' + lift.label + '</div>' +
+      '<div class="today-load"><span class="today-weight">' + weight + '</span><span class="today-unit">kg</span></div>' +
+      '<div class="today-plates">' + formatPlateList(load) + ' <span class="muted">· ' + bar + ' kg bar</span></div>' +
+      '<div class="today-meta">Started ' + info.start.toLocaleDateString() + ' (' + elapsedLabel + ') · block ends ' + endStr + '</div>';
+
+    todayCard.classList.remove('hidden');
+    programStatusCard.classList.add('hidden');
   }
 
   function renderProgramStatus(entries) {
@@ -741,6 +841,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     renderHistory(entries);
     renderChart(entries);
     renderProgramStatus(entries);
+    renderToday(entries);
   }
 
   async function startProgram() {
