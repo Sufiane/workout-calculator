@@ -143,3 +143,8 @@ dist
 
 # Cloudflare dev secrets
 .dev.vars
+
+# Impeccable skill (installed per-machine via `npx impeccable skills install`)
+.claude/skills/
+.github/skills/
+.impeccable/
