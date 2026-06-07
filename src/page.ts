@@ -196,6 +196,15 @@ export const PAGE_HTML = `<!DOCTYPE html>
     font-variant-numeric: tabular-nums;
   }
   .today-plates .short { color: #ef4444; font-weight: 600; }
+  .bar-diagram {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    margin: 8px 0 12px;
+  }
+  .bar-diagram .plate { stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.5; }
+  :root[data-theme="light"] .bar-diagram .plate-light { stroke: rgba(0, 0, 0, 0.3); }
   .today-meta {
     font-size: 12px;
     color: var(--muted);
@@ -560,6 +569,69 @@ export const PAGE_HTML = `<!DOCTYPE html>
     return { state: 'ready', start: start };
   }
 
+  // IPF-ish colour convention so lifters can read the bar at a glance.
+  const PLATE_VISUAL = {
+    25:   { h: 48, w: 9, color: '#d23030' },
+    20:   { h: 44, w: 8, color: '#2570d6' },
+    15:   { h: 40, w: 7, color: '#e3b53b' },
+    10:   { h: 34, w: 6, color: '#2e9a4d' },
+    5:    { h: 26, w: 5, color: '#d8d8d8' },
+    2.5:  { h: 18, w: 4, color: '#9a9a9a' },
+    1.25: { h: 14, w: 3, color: '#6f6f6f' },
+  };
+
+  function expandPlateCounts(counts) {
+    const out = [];
+    counts.forEach(function (token) {
+      const parts = token.split('×');
+      const weight = Number(parts[0]);
+      const times = Number(parts[1]);
+
+      for (let i = 0; i < times; i++) {
+        out.push(weight);
+      }
+    });
+
+    return out;
+  }
+
+  function renderPlateDiagram(load) {
+    const viewW = 360;
+    const viewH = 60;
+    const cy = viewH / 2;
+    const sleeveGap = 10;
+
+    let svg = '<svg viewBox="0 0 ' + viewW + ' ' + viewH + '" class="bar-diagram" role="img" aria-label="loaded barbell diagram">';
+    svg += '<rect x="0" y="' + (cy - 2) + '" width="' + viewW + '" height="4" fill="var(--muted)" opacity="0.45" />';
+
+    if (load.below) {
+      svg += '</svg>';
+      return svg;
+    }
+
+    const plates = expandPlateCounts(load.counts);
+    let leftX = viewW / 2 - sleeveGap;
+    let rightX = viewW / 2 + sleeveGap;
+
+    plates.forEach(function (weight) {
+      const spec = PLATE_VISUAL[weight];
+
+      if (!spec) {
+        return;
+      }
+
+      leftX -= spec.w;
+      svg += '<rect class="plate" x="' + leftX + '" y="' + (cy - spec.h / 2) + '" width="' + spec.w + '" height="' + spec.h + '" rx="1" fill="' + spec.color + '" />';
+      svg += '<rect class="plate" x="' + rightX + '" y="' + (cy - spec.h / 2) + '" width="' + spec.w + '" height="' + spec.h + '" rx="1" fill="' + spec.color + '" />';
+      rightX += spec.w;
+      leftX -= 1;
+      rightX += 1;
+    });
+
+    svg += '</svg>';
+    return svg;
+  }
+
   function formatPlateList(result) {
     if (result.below) {
       return '<span class="muted">target is below the bar</span>';
@@ -602,6 +674,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     todayCard.innerHTML =
       '<div class="today-eyebrow">Today · Week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · ' + lift.label + '</div>' +
       '<div class="today-load"><span class="today-weight">' + weight + '</span><span class="today-unit">kg</span></div>' +
+      renderPlateDiagram(load) +
       '<div class="today-plates">' + formatPlateList(load) + ' <span class="muted">· ' + bar + ' kg bar</span></div>' +
       '<div class="today-meta">Started ' + info.start.toLocaleDateString() + ' (' + elapsedLabel + ') · block ends ' + endStr + '</div>';
 
