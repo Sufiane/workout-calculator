@@ -148,16 +148,6 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .plate-options input { width: auto; }
   #start-program { margin-top: 12px; }
-  .warning-banner {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid #ef4444;
-    color: var(--text);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    line-height: 1.5;
-  }
 </style>
 </head>
 <body>
@@ -170,12 +160,9 @@ export const PAGE_HTML = `<!DOCTYPE html>
     <button id="theme-toggle" class="theme-toggle" type="button">Light</button>
   </div>
 
-  <div id="anon-warning" class="warning-banner hidden">⚠️ <strong>You're not signed in.</strong> Your program and history live only in this browser and can be lost if you clear data or switch devices. <strong>Sign in below</strong> to save them.</div>
-
   <div class="card" id="auth-card">
     <form id="auth-form">
-      <h2>Track your progress</h2>
-      <p class="sub" style="margin: 0 0 14px;">Sign in to save your program and history, watch your progression chart grow, and keep it across devices. Without an account, anything you start lives only in this browser.</p>
+      <h2>Sign in to sync across devices</h2>
       <div class="row">
         <div>
           <label for="auth-email">Email</label>
@@ -470,26 +457,18 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   function renderProgramStatus(entries) {
     const info = activeInfo(entries);
-    const anonNote = currentUser ? '' : ' <span class="muted">· <strong>on this device only</strong> — <strong>sign in</strong> to keep it.</span>';
-    let message;
 
     if (info.state === 'none') {
-      message = currentUser
-        ? 'No active program. Preview a calc, then Start program.'
-        : 'No active program. Preview a calc, then Start program. <strong>Sign in</strong> to save it across devices.';
-      statusBox.innerHTML = '<span class="muted">' + message + '</span>';
+      statusBox.innerHTML = '<span class="muted">No active program. Preview a calc, then Start program.</span>';
       return;
     }
 
     const startStr = info.start.toLocaleDateString();
+    const message = info.state === 'active'
+      ? 'Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr
+      : 'Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.';
 
-    if (info.state === 'active') {
-      message = 'Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr;
-    } else {
-      message = 'Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.';
-    }
-
-    statusBox.innerHTML = '<span class="muted">' + message + '</span>' + anonNote;
+    statusBox.innerHTML = '<span class="muted">' + message + '</span>';
   }
   const signupButton = document.getElementById('signup-btn');
   const logoutButton = document.getElementById('logout-btn');
@@ -514,7 +493,6 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const authPassword = document.getElementById('auth-password');
   const authEmailLabel = document.getElementById('auth-email-label');
   const authError = document.getElementById('auth-error');
-  const anonWarning = document.getElementById('anon-warning');
 
   const HINTS = {
     maxRm: 'The most weight you can lift for a single rep.',
@@ -834,11 +812,9 @@ export const PAGE_HTML = `<!DOCTYPE html>
       authEmailLabel.textContent = user.email;
       authForm.classList.add('hidden');
       authStatus.classList.remove('hidden');
-      anonWarning.classList.add('hidden');
     } else {
       authForm.classList.remove('hidden');
       authStatus.classList.add('hidden');
-      anonWarning.classList.remove('hidden');
     }
   }
 
