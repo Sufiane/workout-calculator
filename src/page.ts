@@ -261,7 +261,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
   </div>
 
   <div class="card">
-    <h2>Plate breakdown</h2>
+    <h2>Bar &amp; plates</h2>
     <div class="row">
       <div>
         <label for="bar-weight">Barbell (kg)</label>
@@ -402,11 +402,9 @@ export const PAGE_HTML = `<!DOCTYPE html>
   ];
 
   const PLATE_FIELDS = [
-    ['maxRm', '1RM'],
-    ['max90', '90%'],
-    ['rep95', '5x1'],
-    ['rep90', '5x3'],
-    ['rep85', '5x5'],
+    ['rep85', '5×5'],
+    ['rep90', '5×3'],
+    ['rep95', '5×1'],
   ];
 
   let lastProgram = null;
