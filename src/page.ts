@@ -145,9 +145,25 @@ export const PAGE_HTML = `<!DOCTYPE html>
   #auth-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   #auth-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .muted { color: var(--muted); font-size: 14px; }
-  .plate-options { display: flex; flex-wrap: wrap; gap: 10px; }
+  .plate-options { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
   .plate-options label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .plate-options input { width: auto; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .preset-btn {
+    width: auto;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .preset-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
   #start-program { margin-top: 12px; }
   .today-eyebrow {
     font-size: 13px;
@@ -277,7 +293,12 @@ export const PAGE_HTML = `<!DOCTYPE html>
       </div>
       <div>
         <label>Available plates (kg)</label>
-        <div id="plate-options" class="plate-options">
+        <div class="presets" id="plate-presets">
+          <button type="button" class="preset-btn active" data-preset="metric">Metric</button>
+          <button type="button" class="preset-btn" data-preset="common">Common</button>
+          <button type="button" class="preset-btn" data-preset="custom">Custom</button>
+        </div>
+        <div id="plate-options" class="plate-options hidden">
           <label><input type="checkbox" value="25" checked /> 25</label>
           <label><input type="checkbox" value="20" checked /> 20</label>
           <label><input type="checkbox" value="15" checked /> 15</label>
@@ -476,6 +497,40 @@ export const PAGE_HTML = `<!DOCTYPE html>
     renderPlates();
     renderToday(historyEntries);
   }
+
+  const PLATE_PRESETS = {
+    metric: [25, 20, 15, 10, 5, 2.5, 1.25],
+    common: [25, 20, 10, 5, 2.5],
+  };
+
+  function applyPreset(name) {
+    const presetButtons = document.querySelectorAll('#plate-presets .preset-btn');
+    Array.prototype.forEach.call(presetButtons, function (btn) {
+      btn.classList.toggle('active', btn.dataset.preset === name);
+    });
+
+    if (name === 'custom') {
+      plateOptions.classList.remove('hidden');
+      return;
+    }
+
+    plateOptions.classList.add('hidden');
+
+    const allowed = PLATE_PRESETS[name];
+    Array.prototype.forEach.call(plateOptions.querySelectorAll('input'), function (input) {
+      input.checked = allowed.indexOf(Number(input.value)) > -1;
+    });
+
+    refreshDerived();
+  }
+
+  document.getElementById('plate-presets').addEventListener('click', function (event) {
+    const btn = event.target.closest('.preset-btn');
+
+    if (btn) {
+      applyPreset(btn.dataset.preset);
+    }
+  });
 
   barSelect.addEventListener('change', refreshDerived);
   plateOptions.addEventListener('change', refreshDerived);
