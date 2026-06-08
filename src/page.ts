@@ -203,6 +203,39 @@ export const PAGE_HTML = `<!DOCTYPE html>
     height: auto;
     margin: 8px 0 12px;
   }
+  .plate-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .plate-chips-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .plate-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    padding: 4px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: opacity 120ms ease-out;
+  }
+  .plate-chip[aria-pressed="false"] {
+    opacity: 0.4;
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+  }
+  .plate-chip .swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .plate-chip { transition: none; }
+  }
   .bar-diagram .plate { stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.5; }
   :root[data-theme="light"] .bar-diagram .plate-light { stroke: rgba(0, 0, 0, 0.3); }
   .today-meta {
@@ -304,7 +337,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
         <label>Available plates (kg)</label>
         <div class="presets" id="plate-presets">
           <button type="button" class="preset-btn active" data-preset="metric">Metric</button>
-          <button type="button" class="preset-btn" data-preset="common">Common</button>
+          <button type="button" class="preset-btn" data-preset="home">Home</button>
           <button type="button" class="preset-btn" data-preset="custom">Custom</button>
         </div>
         <div id="plate-options" class="plate-options hidden">
@@ -509,7 +542,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   const PLATE_PRESETS = {
     metric: [25, 20, 15, 10, 5, 2.5, 1.25],
-    common: [25, 20, 10, 5, 2.5],
+    home: [20, 10, 5, 2.5, 1.25],
   };
 
   function applyPreset(name) {
@@ -539,6 +572,30 @@ export const PAGE_HTML = `<!DOCTYPE html>
     if (btn) {
       applyPreset(btn.dataset.preset);
     }
+  });
+
+  todayCard.addEventListener('click', function (event) {
+    const chip = event.target.closest('.plate-chip');
+
+    if (!chip) {
+      return;
+    }
+
+    const input = plateOptions.querySelector('input[value="' + chip.dataset.plate + '"]');
+
+    if (!input) {
+      return;
+    }
+
+    input.checked = !input.checked;
+
+    // Manual chip flip = custom plate set; sync the preset row to match.
+    const presetButtons = document.querySelectorAll('#plate-presets .preset-btn');
+    Array.prototype.forEach.call(presetButtons, function (button) {
+      button.classList.toggle('active', button.dataset.preset === 'custom');
+    });
+
+    refreshDerived();
   });
 
   barSelect.addEventListener('change', refreshDerived);
@@ -632,6 +689,19 @@ export const PAGE_HTML = `<!DOCTYPE html>
     return svg;
   }
 
+  function renderPlateChips() {
+    const weights = [25, 20, 15, 10, 5, 2.5, 1.25];
+    const chips = weights.map(function (weight) {
+      const spec = PLATE_VISUAL[weight];
+      const input = plateOptions.querySelector('input[value="' + weight + '"]');
+      const on = input && input.checked;
+
+      return '<button type="button" class="plate-chip" data-plate="' + weight + '" aria-pressed="' + on + '" aria-label="' + weight + ' kg plate, ' + (on ? 'available' : 'unavailable') + '"><span class="swatch" style="background:' + spec.color + '"></span>' + weight + '</button>';
+    }).join('');
+
+    return '<div class="plate-chips"><span class="plate-chips-label">Available:</span>' + chips + '</div>';
+  }
+
   function formatPlateList(result) {
     if (result.below) {
       return '<span class="muted">target is below the bar</span>';
@@ -676,7 +746,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
       '<div class="today-load"><span class="today-weight">' + weight + '</span><span class="today-unit">kg</span></div>' +
       renderPlateDiagram(load) +
       '<div class="today-plates">' + formatPlateList(load) + ' <span class="muted">· ' + bar + ' kg bar</span></div>' +
-      '<div class="today-meta">Started ' + info.start.toLocaleDateString() + ' (' + elapsedLabel + ') · block ends ' + endStr + '</div>';
+      '<div class="today-meta">Started ' + info.start.toLocaleDateString() + ' (' + elapsedLabel + ') · block ends ' + endStr + '</div>' +
+      renderPlateChips();
 
     todayCard.classList.remove('hidden');
     programStatusCard.classList.add('hidden');
