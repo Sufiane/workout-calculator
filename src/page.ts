@@ -1229,8 +1229,10 @@ export const PAGE_HTML = `<!DOCTYPE html>
 
   async function loadSession() {
     try {
-      const response = await fetch('/api/auth/me');
-      const user = await response.json();
+      // apiFetch handles silent refresh on 401 — keeps the session alive across the
+      // 5-minute access-token expiry as long as the 7-day refresh token is still good.
+      const response = await apiFetch('/api/auth/me');
+      const user = response.ok ? await response.json() : null;
       setUser(user);
     } catch (error) {
       setUser(null);

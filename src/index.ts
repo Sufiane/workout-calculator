@@ -208,7 +208,12 @@ function handleLogout(): Response {
 }
 
 function handleMe(user: SessionUser | null): Response {
-    return Response.json(user ? { email: user.email } : null);
+    if (!user) {
+        // 401 (not 200 null) lets the client's apiFetch wrapper trigger /api/auth/refresh.
+        return Response.json(null, { status: 401 });
+    }
+
+    return Response.json({ email: user.email });
 }
 
 async function handleHistory(env: Env, user: SessionUser | null): Promise<Response> {
