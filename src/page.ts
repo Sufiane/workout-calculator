@@ -142,6 +142,8 @@ export const PAGE_HTML = `<!DOCTYPE html>
   .delta.flat { color: var(--muted); }
   .auth-actions { display: flex; gap: 12px; }
   .auth-actions button { flex: 1; margin-top: 0; }
+  .block-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .block-actions button { flex: 1; margin-top: 0; }
   #auth-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   #auth-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .muted { color: var(--muted); font-size: 14px; }
@@ -761,13 +763,46 @@ export const PAGE_HTML = `<!DOCTYPE html>
       return;
     }
 
-    const startStr = info.start.toLocaleDateString();
-    const message = info.state === 'active'
-      ? 'Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr
-      : 'Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.';
+    if (info.state === 'active') {
+      const startStr = info.start.toLocaleDateString();
+      statusBox.innerHTML = '<span class="muted">Active program · week ' + info.week + ' of ' + PROGRAM_WEEKS + ' · started ' + startStr + '</span>';
+      return;
+    }
 
-    statusBox.innerHTML = '<span class="muted">' + message + '</span>';
+    const startStr = info.start.toLocaleDateString();
+    const latest = entries[0].program;
+
+    statusBox.innerHTML =
+      '<span class="muted">Last block started ' + startStr + ' (' + PROGRAM_WEEKS + '+ weeks ago) · ready for a new block.</span>' +
+      '<div class="block-actions">' +
+        '<button type="button" id="next-block-btn" class="btn-secondary">Set up next block (' + latest.nextMax90 + ' kg)</button>' +
+        '<button type="button" id="redo-block-btn" class="btn-secondary">Redo previous block (' + latest.max90 + ' kg)</button>' +
+      '</div>';
   }
+
+  let scrollToResultAfterPreview = false;
+
+  function previewBlock(value) {
+    inputKey.value = 'max90';
+    inputValue.value = value;
+    updateHint();
+    scrollToResultAfterPreview = true;
+    form.requestSubmit();
+  }
+
+  statusBox.addEventListener('click', function (event) {
+    const button = event.target.closest('button');
+
+    if (!button || !historyEntries[0]) {
+      return;
+    }
+
+    if (button.id === 'next-block-btn') {
+      previewBlock(historyEntries[0].program.nextMax90);
+    } else if (button.id === 'redo-block-btn') {
+      previewBlock(historyEntries[0].program.max90);
+    }
+  });
   const signupButton = document.getElementById('signup-btn');
   const logoutButton = document.getElementById('logout-btn');
 
@@ -1263,6 +1298,11 @@ export const PAGE_HTML = `<!DOCTYPE html>
       }
 
       renderResult(body);
+
+      if (scrollToResultAfterPreview) {
+        scrollToResultAfterPreview = false;
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } catch (error) {
       showError('Network error. Please try again.');
     } finally {
