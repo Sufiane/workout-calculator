@@ -613,13 +613,21 @@ export const PAGE_HTML = `<!DOCTYPE html>
   const PROGRAM_DAYS = PROGRAM_WEEKS * 7;
   let historyEntries = [];
 
+  // Calendar-day delta in local time: day 0 = same date, day 7 = one week later
+  // regardless of clock time. Round handles DST hour shifts.
+  function calendarDaysBetween(start, end) {
+    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return Math.round((e.getTime() - s.getTime()) / 86400000);
+  }
+
   function activeInfo(entries) {
     if (!entries || entries.length === 0) {
       return { state: 'none' };
     }
 
     const start = new Date(entries[0].createdAt);
-    const days = (Date.now() - start.getTime()) / 86400000;
+    const days = calendarDaysBetween(start, new Date());
 
     if (days < PROGRAM_DAYS) {
       return { state: 'active', start: start, week: Math.min(Math.floor(days / 7) + 1, PROGRAM_WEEKS) };
@@ -860,7 +868,7 @@ export const PAGE_HTML = `<!DOCTYPE html>
     // Project remaining sessions of the current 3-week block as future points.
     const latest = ordered[ordered.length - 1];
     const blockStart = new Date(latest.createdAt);
-    const elapsedDays = (Date.now() - blockStart.getTime()) / 86400000;
+    const elapsedDays = calendarDaysBetween(blockStart, new Date());
     const currentWeek = Math.floor(elapsedDays / 7) + 1;
     const projected = [];
 
